@@ -9,6 +9,7 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { io, type Socket } from 'socket.io-client';
@@ -18,6 +19,9 @@ const PORT = Number(process.env.SMOKE_PORT ?? 4100);
 const BASE_URL = `http://localhost:${PORT}`;
 const HOST_DEVICE = 'smoke-host-device-0001';
 const GUEST_DEVICE = 'smoke-guest-device-0002';
+const WEBHOOK_SECRET = 'smoke-revenuecat-webhook-secret-value';
+/** Webhook event ids are globally unique by design, so make them unique per run. */
+const RUN_ID = Date.now();
 
 type Snapshot = Record<string, unknown> & {
   status?: string;
@@ -77,7 +81,32 @@ async function waitSnapshot(socket: Socket, label: string, predicate: (snapshot:
   throw new Error(`timeout waiting for snapshot: ${label}`);
 }
 
+/**
+ * Refuse to run if something is already serving on the port.
+ *
+ * Without this, a stale server answers the health check, the freshly spawned one
+ * fails to bind, and the entire suite quietly validates the WRONG build — which
+ * is exactly what happened once and cost an afternoon of confusion.
+ */
+async function assertPortFree(port: number): Promise<void> {
+  let occupied = false;
+  try {
+    const response = await fetch(`http://localhost:${port}/health`, {
+      signal: AbortSignal.timeout(1500),
+    });
+    occupied = response.ok;
+  } catch {
+    occupied = false; // nothing listening, which is what we want
+  }
+  if (occupied) {
+    throw new Error(
+      `Port ${port} is already serving a DEEPER server. Stop it first, or set SMOKE_PORT to a free port.`,
+    );
+  }
+}
+
 async function startServer(port = PORT, extraEnv: Record<string, string> = {}): Promise<ChildProcess> {
+  await assertPortFree(port);
   const child = spawn(process.execPath, ['--import', 'tsx', 'src/index.ts'], {
     cwd: path.resolve(import.meta.dirname, '..'),
     env: { ...process.env, PORT: String(port), ...extraEnv },
@@ -97,6 +126,19 @@ async function startServer(port = PORT, extraEnv: Record<string, string> = {}): 
   }
   child.kill();
   throw new Error('server did not become healthy in time');
+}
+
+/** Sign a webhook body exactly the way RevenueCat does. */
+function signedBody(event: Record<string, unknown>, secret: string, whenSeconds = Math.floor(Date.now() / 1000)) {
+  const raw = Buffer.from(JSON.stringify({ api_version: '1.0', event }), 'utf8');
+  const signature = createHmac('sha256', secret).update(`${whenSeconds}.`).update(raw).digest('hex');
+  return {
+    raw,
+    headers: {
+      'content-type': 'application/json',
+      'x-revenuecat-webhook-signature': `t=${whenSeconds},v1=${signature}`,
+    },
+  };
 }
 
 /** Read a raw key straight out of Redis so the test can assert on ciphertext. */
@@ -120,6 +162,7 @@ async function cleanup(pool: pg.Pool): Promise<void> {
   await pool.query(
     `DELETE FROM rooms WHERE host_user_id IN (SELECT id FROM users WHERE device_id LIKE 'smoke-%')`,
   );
+  await pool.query(`DELETE FROM webhook_events WHERE app_user_id LIKE 'smoke-%'`);
   await pool.query(`DELETE FROM users WHERE device_id LIKE 'smoke-%'`);
 }
 
@@ -135,7 +178,7 @@ async function main(): Promise<void> {
   let guest: Socket | undefined;
 
   try {
-    server = await startServer();
+    server = await startServer(PORT, { REVENUECAT_WEBHOOK_SECRET: WEBHOOK_SECRET });
 
     host = track(io(BASE_URL, { transports: ['websocket'] }));
     guest = track(io(BASE_URL, { transports: ['websocket'] }));
@@ -543,6 +586,127 @@ async function main(): Promise<void> {
     } else {
       console.log('\n10. Live state restart test SKIPPED (set SMOKE_REDIS_URL to enable)');
     }
+
+    console.log('\n11. RevenueCat webhook → server-side entitlement');
+    // Create a real user row so the webhook has someone to grant access to.
+    const webhookDevice = 'smoke-webhook-device';
+    const webhookRoom = await emit<{ roomId: string }>(host, 'room:create', {
+      categoryId: 'deep',
+      displayName: 'Buyer',
+      deviceKey: webhookDevice,
+      maxPlayers: 2,
+    });
+    check('webhook fixture user created', webhookRoom.ok === true);
+
+    const transactionId = `smoke-tx-${RUN_ID}`;
+
+    const post = async (payload: { raw: Buffer; headers: Record<string, string> }) => {
+      const response = await fetch(`${BASE_URL}/webhooks/revenuecat`, {
+        method: 'POST',
+        headers: payload.headers,
+        // A fresh Uint8Array view: fetch's BodyInit does not accept a Node Buffer
+        // directly, and we must send the exact bytes we signed.
+        body: new Uint8Array(payload.raw),
+      });
+      return { status: response.status, body: (await response.json().catch(() => ({}))) as Record<string, unknown> };
+    };
+
+    const purchaseEvent = {
+      type: 'INITIAL_PURCHASE',
+      id: `smoke-evt-1-${RUN_ID}`,
+      app_user_id: webhookDevice,
+      product_id: 'deeper_plus_yearly',
+      transaction_id: transactionId,
+      entitlement_ids: ['deeper_plus'],
+      expiration_at_ms: Date.now() + 31_536_000_000,
+      environment: 'PRODUCTION',
+    };
+
+    // 1. Unsigned request must be refused.
+    const unsigned = await post({ raw: Buffer.from(JSON.stringify({ event: purchaseEvent })), headers: { 'content-type': 'application/json' } });
+    check('unsigned webhook is rejected', unsigned.status === 401, `got ${unsigned.status}`);
+
+    // 2. Wrong secret must be refused.
+    const wrongSecret = await post(signedBody(purchaseEvent, 'not-the-real-secret-value'));
+    check('webhook signed with the wrong secret is rejected', wrongSecret.status === 401, `got ${wrongSecret.status}`);
+
+    // 3. Tampered body with a valid header must be refused (the whole point of
+    //    verifying the raw bytes rather than the parsed object).
+    const legit = signedBody(purchaseEvent, WEBHOOK_SECRET);
+    const tamperedRaw = Buffer.from(legit.raw);
+    const flipAt = tamperedRaw.length - 3;
+    tamperedRaw[flipAt] = (tamperedRaw[flipAt] ?? 0) ^ 0x01;
+    const tampered = await post({ raw: tamperedRaw, headers: legit.headers });
+    check('tampered webhook body is rejected', tampered.status === 401, `got ${tampered.status}`);
+
+    // 4. A correctly signed purchase grants server-side premium.
+    const granted = await post(signedBody(purchaseEvent, WEBHOOK_SECRET));
+    check('signed purchase is accepted', granted.status === 200, `got ${granted.status}`);
+    check('purchase is applied', granted.body.applied === true);
+
+    const afterGrant = await pool.query(
+      `SELECT premium_entitlement FROM users WHERE device_id = $1`,
+      [webhookDevice],
+    );
+    check('users.premium_entitlement is now true', afterGrant.rows[0]?.premium_entitlement === true);
+
+    const entitlementRows = await pool.query(
+      `SELECT active, expires_at FROM entitlements
+        WHERE user_id = (SELECT id FROM users WHERE device_id = $1)
+          AND provider = 'revenuecat' AND entitlement_key = 'deeper_plus'`,
+      [webhookDevice],
+    );
+    check('entitlement row written', entitlementRows.rowCount === 1);
+    check('entitlement is active', entitlementRows.rows[0]?.active === true);
+    check('entitlement expiry recorded', entitlementRows.rows[0]?.expires_at instanceof Date);
+
+    const purchaseRows = await pool.query(
+      `SELECT count(*)::int AS n FROM purchases
+        WHERE user_id = (SELECT id FROM users WHERE device_id = $1) AND transaction_id = $2`,
+      [webhookDevice, transactionId],
+    );
+    check('purchase row written', purchaseRows.rows[0]?.n === 1);
+
+    // 5. A retried delivery must be a no-op, not a second sale.
+    const retried = await post(signedBody(purchaseEvent, WEBHOOK_SECRET));
+    check('duplicate delivery is acknowledged', retried.status === 200);
+    check('duplicate delivery is flagged', retried.body.duplicate === true);
+    const purchaseRowsAfterRetry = await pool.query(
+      `SELECT count(*)::int AS n FROM purchases WHERE transaction_id = $1`,
+      [transactionId],
+    );
+    check('duplicate delivery did not duplicate the purchase', purchaseRowsAfterRetry.rows[0]?.n === 1);
+    const eventRows = await pool.query(
+      `SELECT count(*)::int AS n FROM webhook_events WHERE event_id = $1`,
+      [purchaseEvent.id],
+    );
+    check('event recorded exactly once', eventRows.rows[0]?.n === 1);
+
+    // 6. CANCELLATION must not revoke: the subscriber paid until period end.
+    const cancelled = await post(signedBody({ ...purchaseEvent, id: `smoke-evt-2-${RUN_ID}`, type: 'CANCELLATION' }, WEBHOOK_SECRET));
+    check('cancellation is accepted', cancelled.status === 200);
+    check('cancellation does not apply a change', cancelled.body.applied === false);
+    const afterCancel = await pool.query(
+      `SELECT premium_entitlement FROM users WHERE device_id = $1`,
+      [webhookDevice],
+    );
+    check('premium survives cancellation', afterCancel.rows[0]?.premium_entitlement === true);
+
+    // 7. EXPIRATION is what actually removes access.
+    const expired = await post(signedBody({ ...purchaseEvent, id: `smoke-evt-3-${RUN_ID}`, type: 'EXPIRATION' }, WEBHOOK_SECRET));
+    check('expiration is accepted', expired.status === 200);
+    check('expiration revokes', expired.body.effect === 'revoke');
+    const afterExpiry = await pool.query(
+      `SELECT premium_entitlement FROM users WHERE device_id = $1`,
+      [webhookDevice],
+    );
+    check('premium_entitlement is false after expiry', afterExpiry.rows[0]?.premium_entitlement === false);
+
+    // 8. An event for a user we have never seen is acked, not retried forever.
+    const orphan = await post(signedBody({ ...purchaseEvent, id: `smoke-evt-4-${RUN_ID}`, app_user_id: 'smoke-ghost-device' }, WEBHOOK_SECRET));
+    check('unknown user is acknowledged, not retried', orphan.status === 200);
+    check('unknown user is not applied', orphan.body.applied === false);
+    check('unknown user is reported', orphan.body.reason === 'unknown-user');
   } finally {
     host?.disconnect();
     guest?.disconnect();

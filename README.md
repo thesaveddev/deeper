@@ -131,8 +131,37 @@ Setup in the RevenueCat dashboard:
 
 1. Create the products (monthly, annual, lifetime) and attach them to an offering.
 2. Create an entitlement called `deeper_plus` and attach all three products.
-3. Point the webhook at your server (see the RevenueCat webhook work still to do) — the server is what actually unlocks decks, via `users.premium_entitlement`. The client flag alone grants nothing.
-4. Identify the user by the same device key the server uses (`identity.playerId`), which is what lets the webhook attribute a sale to the right `users` row.
+3. Identify the user by the same device key the server uses (`identity.playerId`), which is what lets the webhook attribute a sale to the right `users` row.
+4. Add a webhook pointing at `https://your-api/webhooks/revenuecat`, and set `REVENUECAT_WEBHOOK_SECRET` to the matching value.
+
+### The webhook is what actually unlocks anything
+
+The client flag only drives UI. A deck stays locked until the server has been told, by webhook, that the customer is entitled. It lives at `POST /webhooks/revenuecat` and does two things: write `entitlements` / `purchases` rows, and set `users.premium_entitlement`.
+
+**Authentication** accepts either mechanism RevenueCat offers:
+
+- **HMAC signing (preferred).** The dashboard signs each delivery with `X-RevenueCat-Webhook-Signature: t=<unix>,v1=<hmac>`, computed over `<timestamp>.<raw body>`. The route mounts `express.raw()` for this — verifying the *parsed* body would change the bytes and reject valid deliveries.
+- **Static `Authorization: Bearer <secret>`.**
+
+Either way the comparison is constant-time and the timestamp is checked against a 5-minute window to blunt replays. If `REVENUECAT_WEBHOOK_SECRET` is unset the endpoint returns 503 rather than accepting anything, so a misconfigured deploy can never accidentally grant access.
+
+**Delivery handling:**
+
+- Handlers answer 200 only *after* the event is durably applied, and 5xx on any failure so RevenueCat retries (5 attempts at 5/10/20/40/80 minutes). Unlike the rest of the persistence layer, these writes do not swallow errors — silently losing an entitlement row denies a paying customer.
+- Deliveries are deduplicated on the event `id` in `webhook_events`, because RevenueCat guarantees only "at least one delivery" and reuses the id on retries.
+- An event for an unknown `app_user_id` is acknowledged rather than retried. Retrying cannot conjure a row we deliberately did not create, and it would cause a retry storm. It is logged loudly instead.
+
+**Event semantics** follow RevenueCat's documented behaviour rather than guesswork:
+
+| Event | Effect | Why |
+| --- | --- | --- |
+| `INITIAL_PURCHASE`, `RENEWAL`, `PRODUCT_CHANGE`, `UNCANCELLATION`, `SUBSCRIPTION_EXTENDED` | grant | access is in place |
+| `EXPIRATION`, `REFUND_REVOKE` | revoke | access has ended |
+| `CANCELLATION`, `BILLING_ISSUE`, `SUBSCRIPTION_PAUSED` | no change | see below |
+
+`CANCELLATION` deliberately does **not** revoke. It also fires for refunds, and a subscriber who simply turned off auto-renew has paid until the period ends. RevenueCat is explicit that access is removed on `EXPIRATION`, and that `SUBSCRIPTION_PAUSED` must not revoke either. Revoking on cancellation would lock out paying customers.
+
+RevenueCat also recommends re-syncing via `GET /subscribers` after any webhook. That is not done here: it adds a second credential and a network round-trip to every delivery. Worth adding if you ever see entitlement drift.
 
 "Delete my data" deliberately does **not** call `Purchases.logOut()`. Detaching the RevenueCat identity would orphan an existing purchase and leave future renewals unattributable — it would destroy the user's paid access.
 

@@ -7,9 +7,23 @@ import { z } from 'zod';
 import { GameRoom, type RoomPlayer } from './game-room.js';
 import type { CategoryId, ReactionType } from '@deeper/shared';
 import { getCategory } from '@deeper/content';
-import { initDb } from './db.js';
+import { initDb, logFailure } from './db.js';
 import { initLiveStore } from './live-store.js';
 import { RoomRegistry } from './room-registry.js';
+import {
+  applyEntitlement,
+  findUserByDeviceKeys,
+  recordWebhookEvent,
+} from './persistence.js';
+import {
+  REVENUECAT_ENTITLEMENT,
+  candidateUserKeys,
+  concernsOurEntitlement,
+  effectForEvent,
+  parsePayload,
+  verifyBearer,
+  verifySignature,
+} from './revenuecat.js';
 import {
   ensureUser,
   recordGameFinished,
@@ -26,6 +40,96 @@ import {
 type ServerPlayer = { playerId: string; displayName: string; freeGames: number; premium: boolean; userId?: string | undefined };
 
 const app = express(); app.use(cors()); app.get('/health', (_req, res) => res.json({ ok: true, service: 'deeper-server' }));
+
+/**
+ * RevenueCat webhook.
+ *
+ * `express.raw()` is essential: HMAC verification runs over the exact bytes
+ * received, and letting Express parse the body first would change them and
+ * reject valid deliveries.
+ *
+ * We answer 200 only after the event has been durably applied, and 5xx on any
+ * failure so RevenueCat retries (5 attempts, 5/10/20/40/80 minutes). An unknown
+ * app user is acknowledged rather than retried: retrying cannot conjure a row
+ * we deliberately did not create, and a retry storm helps nobody.
+ */
+app.post('/webhooks/revenuecat', express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
+  const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
+  const secret = process.env.REVENUECAT_WEBHOOK_SECRET;
+  if (!secret || secret.length < 16) {
+    console.warn('[webhook] REVENUECAT_WEBHOOK_SECRET is not set — rejecting all webhook deliveries');
+    res.status(503).json({ error: 'webhook not configured' });
+    return;
+  }
+
+  // HMAC is the strong option; the static header is the simpler one. Either passes.
+  const hmacHeader = req.headers['x-revenuecat-webhook-signature'];
+  const hmacResult = verifySignature(raw, typeof hmacHeader === 'string' ? hmacHeader : undefined, secret);
+  const bearerOk = verifyBearer(
+    typeof req.headers.authorization === 'string' ? req.headers.authorization : undefined,
+    secret,
+  );
+  if (!hmacResult.ok && !bearerOk) {
+    console.warn(`[webhook] rejected delivery: ${hmacResult.ok ? 'hmac ok but bearer failed' : hmacResult.reason}`);
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+
+  const event = parsePayload(raw);
+  if (!event) {
+    res.status(400).json({ error: 'unrecognised payload' });
+    return;
+  }
+
+  try {
+    const firstDelivery = await recordWebhookEvent({
+      provider: 'revenuecat',
+      eventId: event.id,
+      eventType: event.type,
+      appUserId: event.app_user_id,
+      environment: event.environment,
+    });
+    if (!firstDelivery) {
+      res.status(200).json({ ok: true, duplicate: true });
+      return;
+    }
+
+    const effect = effectForEvent(event.type);
+    if (effect === 'keep' || !concernsOurEntitlement(event)) {
+      res.status(200).json({ ok: true, applied: false });
+      return;
+    }
+
+    const userId = await findUserByDeviceKeys(candidateUserKeys(event));
+    if (!userId) {
+      // Acknowledge so RevenueCat stops retrying, but make it loud: this usually
+      // means the purchase arrived for a user we no longer have a row for.
+      console.warn(`[webhook] no local user for RevenueCat app_user_id=${event.app_user_id} (${event.type})`);
+      res.status(200).json({ ok: true, applied: false, reason: 'unknown-user' });
+      return;
+    }
+
+    await applyEntitlement({
+      userId,
+      provider: 'revenuecat',
+      entitlementKey: REVENUECAT_ENTITLEMENT,
+      active: effect === 'grant',
+      expiresAt: event.expiration_at_ms ? new Date(event.expiration_at_ms) : null,
+      productId: event.product_id,
+      transactionId: event.transaction_id,
+      purchasedAt: event.purchased_at_ms ? new Date(event.purchased_at_ms) : undefined,
+    });
+
+    console.log(`[webhook] ${event.type} -> ${effect} for ${event.app_user_id}`);
+    res.status(200).json({ ok: true, applied: true, effect });
+  } catch (error) {
+    // 5xx so RevenueCat retries. The event row is not committed on failure,
+    // so the retry is processed rather than skipped as a duplicate.
+    logFailure('revenuecatWebhook', error);
+    res.status(500).json({ error: 'could not process' });
+  }
+});
+
 const httpServer = http.createServer(app); const io = new Server(httpServer, { cors: { origin: '*' } });
 const registry = new RoomRegistry(); const players = new Map<string, ServerPlayer>(); const sockets = new Map<string, { roomId: string; playerId: string }>();
 const categorySchema = z.enum(['couples', 'deep', 'know-me', 'funny', 'friends', 'first-date', 'late-night', 'after-dark']);

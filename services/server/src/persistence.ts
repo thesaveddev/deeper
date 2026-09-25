@@ -235,6 +235,121 @@ export async function recordReaction(params: {
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * RevenueCat entitlements
+ *
+ * Unlike everything above, these must NOT swallow failures. A dropped write
+ * here means a paying customer is denied (or wrongly granted) access, and the
+ * webhook needs to answer 5xx so RevenueCat retries the delivery. Losing a
+ * reaction row is not worth a retry storm; losing an entitlement is.
+ * ------------------------------------------------------------------ */
+
+export interface WebhookEventRecord {
+  provider: string;
+  eventId: string;
+  eventType: string;
+  appUserId: string | undefined;
+  environment: string | undefined;
+}
+
+/**
+ * Record a delivery. Returns false when this exact event was already handled,
+ * which is how duplicate deliveries are made idempotent — RevenueCat retries
+ * reuse the same event id.
+ */
+export async function recordWebhookEvent(record: WebhookEventRecord): Promise<boolean> {
+  if (!isDbReady()) throw new Error('DB_UNAVAILABLE');
+  const { rows } = await pool.query(
+    `INSERT INTO webhook_events (provider, event_id, event_type, app_user_id, environment)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (provider, event_id) DO NOTHING
+     RETURNING id`,
+    [record.provider, record.eventId, record.eventType, record.appUserId ?? null, record.environment ?? null],
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Resolve the app user to one of our rows.
+ *
+ * The client identifies itself to RevenueCat with the same device key the
+ * server uses, so `app_user_id` maps onto `users.device_id`. The docs also ask
+ * us to try `original_app_user_id` and every alias, since a user may have been
+ * re-identified since their first purchase.
+ */
+export async function findUserByDeviceKeys(keys: string[]): Promise<string | null> {
+  if (!isDbReady() || keys.length === 0) return null;
+  const { rows } = await pool.query(
+    'SELECT id FROM users WHERE device_id = ANY($1::text[]) LIMIT 1',
+    [keys],
+  );
+  return (rows[0]?.id as string | undefined) ?? null;
+}
+
+/**
+ * Apply an entitlement decision. The whole thing is one transaction so the
+ * `entitlements` row and the denormalised `users.premium_entitlement` flag can
+ * never disagree — a guest reading a stale flag would hit a locked deck.
+ */
+export async function applyEntitlement(params: {
+  userId: string;
+  provider: string;
+  entitlementKey: string;
+  active: boolean;
+  expiresAt: Date | null;
+  productId?: string | undefined;
+  transactionId?: string | undefined;
+  purchasedAt?: Date | undefined;
+}): Promise<void> {
+  if (!isDbReady()) throw new Error('DB_UNAVAILABLE');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO entitlements (user_id, provider, entitlement_key, active, expires_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, now())
+       ON CONFLICT (user_id, provider, entitlement_key)
+       DO UPDATE SET active = EXCLUDED.active,
+                     expires_at = EXCLUDED.expires_at,
+                     updated_at = now()`,
+      [params.userId, params.provider, params.entitlementKey, params.active, params.expiresAt],
+    );
+
+    if (params.transactionId) {
+      // ON CONFLICT DO NOTHING: a retried webhook must not duplicate the sale.
+      await client.query(
+        `INSERT INTO purchases (user_id, provider, product_id, transaction_id, purchased_at)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (transaction_id) DO NOTHING`,
+        [
+          params.userId,
+          params.provider,
+          params.productId ?? 'unknown',
+          params.transactionId,
+          params.purchasedAt ?? new Date(),
+        ],
+      );
+    }
+
+    await client.query(
+      `UPDATE users
+          SET premium_entitlement = EXISTS (
+                SELECT 1 FROM entitlements e
+                 WHERE e.user_id = $1 AND e.active = true AND e.entitlement_key = $2
+              ),
+              updated_at = now()
+        WHERE id = $1`,
+      [params.userId, params.entitlementKey],
+    );
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 /** Called when the room-expiry sweep removes a room from memory. */
 export async function recordRoomExpired(roomId: string): Promise<void> {
   if (!isDbReady()) return;
