@@ -99,6 +99,18 @@ async function startServer(port = PORT, extraEnv: Record<string, string> = {}): 
   throw new Error('server did not become healthy in time');
 }
 
+/** Read a raw key straight out of Redis so the test can assert on ciphertext. */
+async function readRedisValue(url: string, key: string): Promise<string | null> {
+  const client = (await import('redis')).createClient({ url });
+  client.on('error', () => undefined);
+  await client.connect();
+  try {
+    return await client.get(key);
+  } finally {
+    await client.quit().catch(() => undefined);
+  }
+}
+
 async function cleanup(pool: pg.Pool): Promise<void> {
   await pool.query(
     `DELETE FROM games WHERE room_id IN (
@@ -400,15 +412,136 @@ async function main(): Promise<void> {
         categoryId: 'late-night',
         displayName: 'Test',
         deviceKey: 'smoke-premium-off-0004',
-      });
-      check(
-        'PREMIUM_ENFORCEMENT=off unlocks premium decks locally',
-        openAttempt.ok === true,
-        openAttempt.ok ? '' : openAttempt.error.code,
-      );
+      });    check(
+      'PREMIUM_ENFORCEMENT=off unlocks premium decks locally',
+      openAttempt.ok === true,
+      openAttempt.ok ? '' : openAttempt.error.code,
+    );
       openClient.disconnect();
     } finally {
       openServer.kill();
+    }
+
+    // Only meaningful against a real Redis, so CI sets SMOKE_REDIS_URL.
+    const redisUrl = process.env.SMOKE_REDIS_URL;
+    if (redisUrl) {
+      console.log('\n10. Live state survives a full server restart (Redis)');
+      const secret = 'smoke-live-state-secret-value-32b';
+      const restartPort = PORT + 2;
+      const url = `http://localhost:${restartPort}`;
+
+      const firstServer = await startServer(restartPort, {
+        REDIS_URL: redisUrl,
+        LIVE_STATE_SECRET: secret,
+      });
+      const connect = async () => {
+        const client = io(url, { transports: ['websocket'] });
+        await new Promise<void>((resolve) => client.on('connect', () => resolve()));
+        return client;
+      };
+
+      let a: Awaited<ReturnType<typeof connect>> | undefined;
+      let b: Awaited<ReturnType<typeof connect>> | undefined;
+      try {
+        a = await connect();
+        b = await connect();
+
+        const restartRoom = await emit<{ roomId: string; roomCode: string; hostPlayerId: string }>(
+          a,
+          'room:create',
+          { categoryId: 'deep', displayName: 'Ada', deviceKey: 'smoke-restart-host', maxPlayers: 2 },
+        );
+        check('restart fixture room created', restartRoom.ok === true);
+        if (!restartRoom.ok) throw new Error(restartRoom.error.message);
+
+        const restartGuest = await emit<{ players: unknown[] }>(b, 'room:join', {
+          roomCode: restartRoom.data.roomCode,
+          displayName: 'Grace',
+          deviceKey: 'smoke-restart-guest',
+        });
+        check('restart fixture guest joined', restartGuest.ok === true);
+        if (!restartGuest.ok) throw new Error(restartGuest.error.message);
+
+        await emit(a, 'room:start');
+        await emit(a, 'answer:submit', { answer: 'REDIS_ANSWER_A' });
+        await emit(b, 'answer:submit', { answer: 'REDIS_ANSWER_B' });
+        await sleep(300); // let the mirror write land
+
+        // Hard kill: no graceful shutdown, no chance to flush anything.
+        a.disconnect();
+        b.disconnect();
+        firstServer.kill();
+        await sleep(800);
+
+        const secondServer = await startServer(restartPort, {
+          REDIS_URL: redisUrl,
+          LIVE_STATE_SECRET: secret,
+        });
+        try {
+          const c = await connect();
+          const d = await connect();
+
+          const restoredHost = await emit<Snapshot>(c, 'session:resume', {
+            roomId: restartRoom.data.roomId,
+            playerId: restartRoom.data.hostPlayerId,
+            deviceKey: 'smoke-restart-host',
+          });
+          check(
+            'room is restored from Redis after a hard restart',
+            restoredHost.ok === true,
+            restoredHost.ok ? '' : restoredHost.error.code,
+          );
+          check(
+            'restored room is still mid-question-1',
+            restoredHost.ok && restoredHost.data.questionNumber === 1,
+          );
+          check(
+            'restored room kept both players',
+            restoredHost.ok && (restoredHost.data.players?.length ?? 0) === 2,
+          );
+          check(
+            'restored room never exposed answers before the reveal',
+            restoredHost.ok && restoredHost.data.revealedAnswers === undefined,
+          );
+
+          const restoredGuest = await emit<Snapshot>(d, 'session:resume', {
+            roomId: restartRoom.data.roomId,
+            playerId: restartGuest.you,
+            deviceKey: 'smoke-restart-guest',
+          });
+          check('guest also resumes into the restored room', restoredGuest.ok === true);
+
+          await emit(c, 'reveal:ready');
+          const revealed = await emit<Snapshot>(d, 'reveal:ready');
+          const revealedAnswers = revealed.ok ? revealed.data.revealedAnswers ?? [] : [];
+          check(
+            'both answers survived the restart and revealed together',
+            revealed.ok &&
+              revealedAnswers.some((item) => item.answer === 'REDIS_ANSWER_A') &&
+              revealedAnswers.some((item) => item.answer === 'REDIS_ANSWER_B'),
+            JSON.stringify(revealedAnswers.map((item) => item.answer)),
+          );
+
+          // The ciphertext in Redis must not be readable without the key.
+          const raw = await readRedisValue(redisUrl, `deeper:room:${restartRoom.data.roomId}`);
+          check('room was written to Redis', typeof raw === 'string' && raw.length > 0);
+          check(
+            'answers are encrypted at rest, not plaintext',
+            typeof raw === 'string' && !raw.includes('REDIS_ANSWER_A'),
+          );
+
+          c.disconnect();
+          d.disconnect();
+        } finally {
+          secondServer.kill();
+        }
+      } finally {
+        a?.disconnect();
+        b?.disconnect();
+        firstServer.kill();
+      }
+    } else {
+      console.log('\n10. Live state restart test SKIPPED (set SMOKE_REDIS_URL to enable)');
     }
   } finally {
     host?.disconnect();

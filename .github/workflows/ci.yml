@@ -60,8 +60,21 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       DATABASE_URL: postgresql://deeper:deeper@localhost:5432/deeper
+      REDIS_URL: redis://localhost:6379
+      # Lets the smoke test prove a live game survives a hard server restart.
+      SMOKE_REDIS_URL: redis://localhost:6379
+      LIVE_STATE_SECRET: ci-live-state-secret-value-not-for-production
       # Exercise the real production behaviour: premium decks stay locked.
       PREMIUM_ENFORCEMENT: 'on'
     steps:

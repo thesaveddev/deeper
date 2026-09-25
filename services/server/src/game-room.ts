@@ -15,12 +15,22 @@ export interface RoomState {
 
 export class GameRoom {
   readonly state: RoomState;
-  constructor(categoryId: CategoryId, host: RoomPlayer, maxPlayers = 8) {
+  /** Set by the registry so every mutation mirrors state to Redis. */
+  private onChange: ((room: GameRoom) => void) | null = null;
+  constructor(categoryId: CategoryId, host: RoomPlayer, maxPlayers = 8, restored?: RoomState) {
     const gameMode: GameMode = categoryId === 'know-me' ? 'prediction' : 'standard';
-    this.state = { roomId: randomUUID(), roomCode: makeRoomCode(), hostPlayerId: host.playerId, categoryId, maxPlayers, status: 'lobby', players: new Map([[host.playerId, host]]), questions: getQuestions(categoryId, TOTAL_QUESTIONS), questionNumber: 0, phase: null, answers: new Map(), predictions: new Map(), revealed: new Set(), reactions: new Map(), consumedCredit: false, lastActivityAt: Date.now(), gameMode, scores: new Map() };
+    this.state = restored ?? { roomId: randomUUID(), roomCode: makeRoomCode(), hostPlayerId: host.playerId, categoryId, maxPlayers, status: 'lobby', players: new Map([[host.playerId, host]]), questions: getQuestions(categoryId, TOTAL_QUESTIONS), questionNumber: 0, phase: null, answers: new Map(), predictions: new Map(), revealed: new Set(), reactions: new Map(), consumedCredit: false, lastActivityAt: Date.now(), gameMode, scores: new Map() };
   }
+  /** Rebuild a live room from state restored out of Redis. */
+  static fromState(state: RoomState): GameRoom {
+    const host = state.players.get(state.hostPlayerId) ?? state.players.values().next().value;
+    if (!host) throw new Error('PLAYER_NOT_IN_ROOM');
+    return new GameRoom(state.categoryId, host, state.maxPlayers, state);
+  }
+  setOnChange(handler: (room: GameRoom) => void) { this.onChange = handler; }
+  private notify() { this.onChange?.(this); }
   get participants() { return [...this.state.players.values()]; }
-  touch() { this.state.lastActivityAt = Date.now(); }
+  touch() { this.state.lastActivityAt = Date.now(); this.notify(); }
   addPlayer(player: RoomPlayer) { if (this.state.status !== 'lobby') throw new Error('GAME_ALREADY_STARTED'); if (this.state.players.size >= this.state.maxPlayers) throw new Error('ROOM_FULL'); this.state.players.set(player.playerId, player); this.touch(); }
   removePlayer(playerId: string) { this.state.players.delete(playerId); if (this.state.hostPlayerId === playerId) { const next = this.participants.find((player) => player.connected); if (next) { this.state.hostPlayerId = next.playerId; next.isHost = true; } } this.touch(); }
   setConnection(playerId: string, connected: boolean, socketId?: string) { const player = this.state.players.get(playerId); if (!player) throw new Error('PLAYER_NOT_IN_ROOM'); player.connected = connected; player.socketId = socketId; this.touch(); }
