@@ -116,6 +116,26 @@ It creates and removes its own `smoke-%` rows, so it is safe to run against a lo
 
 Set `SMOKE_REDIS_URL` to additionally run the restart-survival check, which kills the server mid-round and asserts the room, the question and both encrypted answers are recovered. CI runs it against a real Redis service.
 
+## DEEPER+ (RevenueCat)
+
+Purchases go through the RevenueCat SDK. Plan names, prices and the "save X%" figure are all read from the App Store / Play Store, so nothing is hardcoded and the numbers are correct in the user's own currency and locale.
+
+```bash
+EXPO_PUBLIC_REVENUECAT_IOS_KEY=appl_xxx
+EXPO_PUBLIC_REVENUECAT_ANDROID_KEY=goog_xxx
+```
+
+**Purchases require a development build.** `react-native-purchases` is a native module and is not present in Expo Go, so the paywall shows an explicit "needs a development build" state there rather than failing. The module is required lazily behind try/catch for exactly this reason — a static import would take down the whole route graph.
+
+Setup in the RevenueCat dashboard:
+
+1. Create the products (monthly, annual, lifetime) and attach them to an offering.
+2. Create an entitlement called `deeper_plus` and attach all three products.
+3. Point the webhook at your server (see the RevenueCat webhook work still to do) — the server is what actually unlocks decks, via `users.premium_entitlement`. The client flag alone grants nothing.
+4. Identify the user by the same device key the server uses (`identity.playerId`), which is what lets the webhook attribute a sale to the right `users` row.
+
+"Delete my data" deliberately does **not** call `Purchases.logOut()`. Detaching the RevenueCat identity would orphan an existing purchase and leave future renewals unattributable — it would destroy the user's paid access.
+
 ## Other commands
 
 ```bash

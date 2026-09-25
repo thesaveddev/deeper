@@ -67,6 +67,7 @@ type RoomSnapshotEndedReason = NonNullable<RoomState['endedReason']>;
  * ------------------------------------------------------------------ */
 
 function loadKey(): Buffer | null {
+  if (encryptionKey) return encryptionKey;
   const secret = process.env.LIVE_STATE_SECRET;
   if (!secret || secret.length < 16) {
     if (!warnedNoSecret) {
@@ -78,7 +79,8 @@ function loadKey(): Buffer | null {
     }
     return null;
   }
-  return scryptSync(secret, 'deeper.live.v1', 32);
+  encryptionKey = scryptSync(secret, 'deeper.live.v1', 32);
+  return encryptionKey;
 }
 
 function encrypt(plaintext: string, key: Buffer): string {
@@ -110,33 +112,50 @@ function decrypt(blob: string, key: Buffer): string | null {
  * ------------------------------------------------------------------ */
 
 export async function initLiveStore(): Promise<void> {
-  encryptionKey = loadKey();
+  // The key is resolved lazily, not here: `initDb` populates process.env from
+  // the repo-root .env, and these two run concurrently. Reading it eagerly would
+  // race that and silently fall back to "no encryption" in local dev.
   const url = process.env.REDIS_URL || DEFAULT_URL;
+
+  // Probe with retries DISABLED. With a reconnect strategy in place, a refused
+  // connection is retried forever and connect() never settles — which meant a
+  // missing Redis delayed startup for seconds and starved callers (notably the
+  // smoke test) of their health-check budget. Retries are switched on only
+  // after a successful connect, so long-lived reconnects still work.
   const candidate = createClient({
     url,
-    socket: { connectTimeout: 1500, reconnectStrategy: (retries) => Math.min(retries * 200, 3000) },
+    socket: { connectTimeout: 1500, reconnectStrategy: () => false },
   });
   // Without a listener, a background reconnect error would take the process
   // down. Live state is best-effort and must never be fatal.
   candidate.on('error', () => undefined);
 
-  // The reconnect strategy makes connect() retry indefinitely, so the initial
-  // probe has to be bounded here — otherwise a missing Redis delays startup
-  // forever and the server never begins listening.
+  // Backstop for a host that accepts the socket but never answers.
   let timer: NodeJS.Timeout | undefined;
   try {
     await Promise.race([
       candidate.connect(),
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error('connect timeout')), 2500);
+        timer = setTimeout(() => reject(new Error('connect timeout')), 2000);
         timer.unref?.();
       }),
     ]);
+    // Now that we have a live connection, restore retry behaviour for drops.
+    if (candidate.options?.socket) {
+      candidate.options.socket.reconnectStrategy = (retries: number) => Math.min(retries * 200, 3000);
+    }
     client = candidate;
     connected = true;
     console.log(`[live-store] connected to ${url} — live games survive restarts`);
   } catch {
-    candidate.destroy();
+    // Do NOT await this: tearing down a half-open client can block, and a
+    // missing cache must never delay or hang startup. destroy() also throws
+    // synchronously when the socket already closed, hence the try/catch.
+    try {
+      void candidate.destroy();
+    } catch {
+      // already closed
+    }
     client = null;
     connected = false;
     console.warn(`[live-store] no Redis at ${url} — running in-memory only (games will not survive a restart)`);
@@ -243,7 +262,7 @@ const codeKey = (code: string) => `${KEY_PREFIX}:code:${code}`;
 export async function persistRoom(state: RoomState): Promise<void> {
   if (!client || !connected) return;
   try {
-    const payload = JSON.stringify(serializeRoom(state, encryptionKey));
+    const payload = JSON.stringify(serializeRoom(state, loadKey()));
     // MULTI so the room and its code index can never disagree.
     await client.multi().set(roomKey(state.roomId), payload, { EX: ROOM_TTL_SECONDS })
       .set(codeKey(state.roomCode), state.roomId, { EX: ROOM_TTL_SECONDS })
@@ -258,7 +277,7 @@ export async function restoreRoom(roomId: string): Promise<RoomState | null> {
   try {
     const raw = await client.get(roomKey(roomId));
     if (!raw) return null;
-    return deserializeRoom(JSON.parse(raw) as SerializedRoom, encryptionKey);
+    return deserializeRoom(JSON.parse(raw) as SerializedRoom, loadKey());
   } catch (error) {
     console.warn('[live-store] restore failed:', error instanceof Error ? error.message : error);
     return null;

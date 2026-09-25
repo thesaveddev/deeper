@@ -99,7 +99,13 @@ export function GameProvider({ children }: PropsWithChildren) {
   }, []);
 
   const refreshAccount = useCallback(async () => {
-    const [games, isPremium] = await Promise.all([loadFreeGames(), loadPremiumState()]);
+    // Pass the device key so RevenueCat identifies this install as the same
+    // user the server does — that is what lets the purchase webhook attribute
+    // the sale to the right row in `users`.
+    const [games, isPremium] = await Promise.all([
+      loadFreeGames(),
+      loadPremiumState(identityRef.current?.playerId),
+    ]);
     setFreeGames(games);
     setPremium(isPremium);
   }, []);

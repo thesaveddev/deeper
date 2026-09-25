@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/src/lib/theme';
-import { PLANS, purchasePlan, restorePurchases, type PremiumPlan } from '@/src/lib/premium';
+import { loadPlans, purchasePlan, restorePurchases, purchasesAvailable, PurchaseCancelledError, type PremiumPlan } from '@/src/lib/premium';
 import { useGame } from '@/src/lib/game-store';
 import { trackPaywallViewed, trackSubscriptionStarted } from '@/src/lib/analytics';
 
@@ -17,22 +17,48 @@ const BENEFITS = [
 
 export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
-  const { refreshAccount } = useGame();
-  const [selected, setSelected] = useState<string>(PLANS.find((p) => p.recommended)?.id ?? PLANS[1]?.id ?? 'yearly');
+  const { refreshAccount, identity } = useGame();
+  const [plans, setPlans] = useState<PremiumPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<string>('');
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   useEffect(() => { trackPaywallViewed(); }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadPlans(identity?.playerId).then((loaded) => {
+      if (cancelled) return;
+      setPlans(loaded);
+      setSelected((current) => current || loaded.find((p) => p.recommended)?.id || loaded[0]?.id || '');
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [identity?.playerId]);
+
   const [purchasing, setPurchasing] = useState(false);
   const [purchased, setPurchased] = useState(false);
   const [restored, setRestored] = useState(false);
 
   const handlePurchase = async () => {
+    setPurchaseError(null);
     setPurchasing(true);
-    const ok = await purchasePlan(selected);
-    setPurchasing(false);
-    if (ok) {
-      await refreshAccount();
-      setPurchased(true);
-      trackSubscriptionStarted(selected);
+    try {
+      const ok = await purchasePlan(selected);
+      if (ok) {
+        await refreshAccount();
+        setPurchased(true);
+        trackSubscriptionStarted(selected);
+      }
+    } catch (error) {
+      // A user backing out of the store sheet is not an error worth shouting about.
+      if (!(error instanceof PurchaseCancelledError)) {
+        setPurchaseError('That purchase could not be completed. Please try again.');
+      }
+    } finally {
+      setPurchasing(false);
     }
   };
 
@@ -90,8 +116,20 @@ export default function PaywallScreen() {
 
       {/* Plans */}
       <Text style={styles.sectionTitle}>Choose your plan</Text>
+      {loading ? (
+        <ActivityIndicator color={theme.pink} style={{ marginVertical: theme.spacing.xl }} />
+      ) : plans.length === 0 ? (
+        <View style={styles.unavailableCard}>
+          <Text style={styles.unavailableTitle}>Plans unavailable</Text>
+          <Text style={styles.unavailableSub}>
+            {purchasesAvailable()
+              ? 'We could not reach the store just now. Please try again in a moment.'
+              : 'Purchases need a development build of DEEPER, so they cannot run inside Expo Go. Use the app on a real device build to subscribe.'}
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.plans}>
-        {PLANS.map((plan) => {
+        {plans.map((plan) => {
           const isSelected = selected === plan.id;
           return (
             <Pressable
@@ -129,11 +167,12 @@ export default function PaywallScreen() {
       </View>
 
       {/* Purchase button */}
+      {purchaseError ? <Text style={styles.purchaseError}>{purchaseError}</Text> : null}
       <Pressable
-        disabled={purchasing}
+        disabled={purchasing || loading || plans.length === 0}
         style={({ pressed }) => [
           styles.primaryButton,
-          purchasing && { opacity: 0.6 },
+          (purchasing || plans.length === 0) && { opacity: 0.6 },
           pressed && !purchasing && { opacity: 0.88 },
         ]}
         onPress={handlePurchase}
@@ -142,7 +181,9 @@ export default function PaywallScreen() {
           <ActivityIndicator color={theme.text} />
         ) : (
           <Text style={styles.primaryButtonText}>
-            Subscribe with {PLANS.find((p) => p.id === selected)?.price ?? ''}
+            {plans.find((p) => p.id === selected)
+              ? `Subscribe with ${plans.find((p) => p.id === selected)?.price}`
+              : 'Subscribe'}
           </Text>
         )}
       </Pressable>
@@ -229,6 +270,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.purple, padding: 18, borderRadius: 17, alignItems: 'center',
   },
   primaryButtonText: { color: theme.text, fontSize: 16, fontWeight: '800' },
+
+  /* Store unavailable (Expo Go, no API key, or store unreachable) */
+  unavailableCard: {
+    backgroundColor: theme.surface, borderRadius: theme.radius.lg, padding: 20,
+    borderWidth: 1, borderColor: theme.border, marginBottom: theme.spacing.xl, gap: 6,
+  },
+  unavailableTitle: { color: theme.text, fontSize: 15, fontWeight: '800' },
+  unavailableSub: { color: theme.muted, fontSize: 13, lineHeight: 19 },
+  purchaseError: {
+    color: theme.pink, fontSize: 13, textAlign: 'center', marginBottom: theme.spacing.md,
+  },
 
   /* Guest note */
   guestNote: {
