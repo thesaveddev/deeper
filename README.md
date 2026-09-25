@@ -63,7 +63,32 @@ Health check:
 http://localhost:4400/health
 ```
 
-The server persists rooms, players, games, game questions and reactions to PostgreSQL at runtime. Answer and prediction text is never written to the database — it lives only in memory for the active round and is discarded when the round advances. If PostgreSQL is unreachable the server still runs, using in-memory state only, and logs a `[DB]` warning.
+The server persists rooms, players, games, game questions and reactions to PostgreSQL at runtime. Answer and prediction text is never written to the database. If PostgreSQL is unreachable the server still runs, using in-memory state only, and logs a `[DB]` warning.
+
+## Live game state (Redis)
+
+The authoritative state machine lives in `GameRoom`, but it is mirrored to Redis on every mutation and transparently rehydrated on cache miss. A deploy, crash or `tsx watch` rebuild no longer destroys games that are in progress — a player who reconnects lands back on the exact question they left, with their answer intact.
+
+```bash
+# Optional. With no Redis reachable the game is fully playable, it just
+# won't survive a restart.
+REDIS_URL=redis://localhost:6379
+```
+
+**This means answers are written outside the phone for the first time.** They are:
+
+- encrypted with AES-256-GCM under `LIVE_STATE_SECRET`
+- stored only for the lifetime of the room (2 hour TTL)
+- dropped the moment the game ends, along with the room key
+- never written to PostgreSQL, never logged, never analysed
+
+Without `LIVE_STATE_SECRET` the server refuses to write answers in clear rather than storing them unencrypted: the room still survives a restart, but the in-flight round is lost. That is the safe failure direction.
+
+```bash
+openssl rand -hex 32   # generate a production value
+```
+
+Redis is also how you would scale past one server instance, since live state is no longer pinned to a single process. That is not yet wired up — there is no Redis pub/sub fan-out between instances, so two servers would each hold their own connection set.
 
 ## Database
 
@@ -79,7 +104,7 @@ On boot the server syncs the question catalog (8 categories, 800 questions) into
 
 Free-game accounting is enforced by the unique `games.credit_consumption_key` column: a room is charged at most once, ever. The host's `free_hosted_games_remaining` is decremented atomically when the game starts; guests are never charged.
 
-### Two-client integration smoke test
+## Two-client integration smoke test
 
 Boots an isolated server on port 4100, plays a full host/guest round over Socket.IO, asserts answer privacy and synchronised reveal, then verifies the persisted rows (and that no answers table exists):
 
@@ -88,6 +113,8 @@ npm --workspace @deeper/server run smoke
 ```
 
 It creates and removes its own `smoke-%` rows, so it is safe to run against a local development database.
+
+Set `SMOKE_REDIS_URL` to additionally run the restart-survival check, which kills the server mid-round and asserts the room, the question and both encrypted answers are recovered. CI runs it against a real Redis service.
 
 ## Other commands
 
