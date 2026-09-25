@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same branch so a rapid series of pushes does
+# not burn the minutes queue.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # Fast feedback: no services, no bundling. Runs on every push.
+  static:
+    name: Typecheck & unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+  # Proves the game actually plays: two real Socket.IO clients against a real
+  # Postgres, asserting answer privacy, reveal sync, reconnection, DEEPER+
+  # gating and the persisted rows.
+  integration:
+    name: End-to-end smoke
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: deeper
+          POSTGRES_PASSWORD: deeper
+          POSTGRES_DB: deeper
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://deeper:deeper@localhost:5432/deeper
+      # Exercise the real production behaviour: premium decks stay locked.
+      PREMIUM_ENFORCEMENT: 'on'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Apply migrations
+        run: npm --workspace infra/postgres run migrate
+
+      - name: Seed question catalog
+        run: npm --workspace infra/postgres run seed
+
+      - name: Two-client smoke test
+        run: npm --workspace @deeper/server run smoke
+
+  # A static import that throws on load used to take down the entire route
+  # graph in Expo Go, and nothing in the test suite would have caught it. This
+  # job is the canary for that whole class of bug.
+  bundle:
+    name: Bundle (android + ios)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Export Android bundle
+        run: npx expo export --platform android --output-dir dist-android
+
+      - name: Export iOS bundle
+        run: npx expo export --platform ios --output-dir dist-ios
+
+      - name: Assert bundles were produced
+        run: |
+          set -euo pipefail
+          for dir in dist-android dist-ios; do
+            if [ ! -d "$dir/_expo/static/js" ]; then
+              echo "::error::$dir produced no JavaScript bundle"
+              exit 1
+            fi
+            echo "$dir OK: $(du -sh "$dir" | cut -f1)"
+          done

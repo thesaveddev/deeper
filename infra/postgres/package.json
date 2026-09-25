@@ -1,0 +1,19 @@
+{
+  "name": "@deeper/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "migrate": "node --import tsx src/migrate.ts",
+    "seed": "node --import tsx src/seed.ts",
+    "reset": "node --import tsx src/reset.ts"
+  },
+  "dependencies": {
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.4",
+    "tsx": "^4.20.5",
+    "typescript": "~5.9.3"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "DEEPER",
+    "slug": "deeper",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "deeper",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "plugins": ["expo-router"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.deeper.mobile",
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "DEEPER uses this permission to keep ads relevant and support the free experience."
+      }
+    },
+    "android": {
+      "package": "app.deeper.mobile",
+      "adaptiveIcon": { "backgroundColor": "#0D0D12" }
+    },
+    "experiments": { "typedRoutes": true },
+    "extra": {
+      "router": { "origin": false },
+      "eas": { "projectId": "REPLACE_WITH_EAS_PROJECT_ID" }
+    }
+  }
+}
