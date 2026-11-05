@@ -43,3 +43,6 @@ expo-env.d.ts
 # Generated artwork contact sheet (tools/preview-assets.mjs output).
 # The PNGs in assets/ ARE committed — only this throwaway review page is not.
 tools/preview-assets.html
+
+# Assistant workspace state (session memory, notes). Local only — never ship it.
+.workbuddy-ai/
