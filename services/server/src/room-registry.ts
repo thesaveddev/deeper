@@ -9,15 +9,20 @@
  * game is fully playable either way.
  */
 
-import { GameRoom, type RoomPlayer } from './game-room.js';
+import { GameRoom, type RoomPlayer, type RoomQuestions } from './game-room.js';
 import type { CategoryId } from '@deeper/shared';
 import { findRoomIdByCode, forgetRoom, liveStoreEnabled, persistRoom, restoreRoom } from './live-store.js';
 
 export class RoomRegistry {
   private readonly cache = new Map<string, GameRoom>();
 
-  create(categoryId: CategoryId, host: RoomPlayer, maxPlayers: number): GameRoom {
-    const room = new GameRoom(categoryId, host, maxPlayers);
+  /**
+   * `questions` is passed in rather than drawn here because selecting them is
+   * async: the no-repeat window needs a database read. When it is omitted the
+   * room falls back to a plain shuffled draw.
+   */
+  create(categoryId: CategoryId, host: RoomPlayer, maxPlayers: number, questions?: RoomQuestions): GameRoom {
+    const room = new GameRoom(categoryId, host, maxPlayers, undefined, questions);
     this.adopt(room);
     return room;
   }

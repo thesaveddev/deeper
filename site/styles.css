@@ -1,0 +1,1837 @@
+/* Impeccable · surface: marketing (Persuade) · mode: polish
+ * world: near-black room, warm light, generous radii, one accent
+ *
+ * Preserved from the previous pass: the palette, the radii, the glow textures,
+ * the illustrated game states, the motion stance.
+ * Rebuilt in this pass, because each of these was a category default rather
+ * than a decision:
+ *
+ *   - `.eyebrow` is gone. A kicker above a heading is a hard ban: the heading
+ *     carries its own weight. It appeared 13 times and repeated the heading
+ *     underneath it in a smaller, greyer, letter-spaced voice.
+ *   - The hero-metric template is gone. A row of three big-number/little-label
+ *     cards is the most recognisable AI landing-page component there is, and it
+ *     was carrying real information (player counts, question counts) in the
+ *     most templated way available. It is now a ruled spec list.
+ *   - The coloured `border-left` on the revealed-answer panel is gone. Replaced
+ *     with a full hairline in a warm tint plus a top light catch, which keeps
+ *     the "this is lit" reading without the side-tab tell.
+ *   - Monospace is now only ever literal data: the room code, counts, ordinals.
+ *     It came off every label, bar and column heading.
+ *   - Deck marks are authored SVG in one stroke weight, not Unicode glyphs.
+ *
+ * Every colour and font-family below resolves to a token in tokens.css.
+ */
+
+@import url('tokens.css');
+
+/* ------------------------------------------------------------------ base -- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  /* `clip`, never `hidden`: `hidden` on a root element silently creates a
+     scroll container and breaks position: sticky on descendants. */
+  overflow-x: clip;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* Both schemes are declared in tokens.css: this is the default, and the light
+     block sets it again for either the system preference or an explicit choice.
+     `light dark` is what makes the browser's own surfaces (scrollbars, form
+     controls, the caret) follow the page instead of belonging to no system. */
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.65;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Film grain, over everything, never interactive. Fixed rather than attached to
+   a scrolling container: a repeating texture on a scrolling element repaints on
+   every frame and destroys mobile frame rate. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background-image: url('./assets/grain.png');
+  background-repeat: repeat;
+  /* Both values are scheme-dependent. `overlay` on a near-black ground is
+     barely-there texture, which is what grain should be; the same `overlay` on
+     near-white crushes to grey mud and reads as a dirty screen, so light mode
+     composites it with `soft-light` instead and drops the opacity to match. */
+  opacity: var(--grain-opacity);
+  mix-blend-mode: var(--grain-blend);
+}
+
+/* Ambient room light. Three real PNGs rather than CSS gradients: they carry a
+   noise dither that an 8-bit gradient cannot, so a wide dark field does not
+   band. They are light sources in the scene, not shadows pretending to be
+   depth, so they sit behind the content and never move on scroll. */
+.glow {
+  position: absolute;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-size: cover;
+  z-index: 0;
+  /* These are light sources photographed for a dark room. At full strength on
+     paper they are pale washed-out discs, so light mode pulls them back hard.
+     They are kept rather than dropped, because a light scheme with no light in
+     it is a screenshot of a dark design, not a design.
+
+     This multiplies the per-placement opacity set further down (0.85, 0.7,
+     0.55), so a glow lands at 0.5 of its dark value on paper. */
+  opacity: var(--glow-opacity);
+}
+
+.glow--pink   { background-image: url('./assets/glow-pink.png'); }
+.glow--violet { background-image: url('./assets/glow-violet.png'); }
+.glow--ember  { background-image: url('./assets/glow-ember.png'); }
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+svg {
+  display: block;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  margin: 0;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+  max-width: var(--measure);
+}
+
+a {
+  color: var(--color-accent-text);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  transition: color var(--dur-short) var(--ease-out);
+}
+
+a:hover {
+  color: var(--color-accent-lit);
+  text-decoration-thickness: 2px;
+}
+
+/* The focus ring appears instantly. Animating it means a keyboard user has no
+   indicator for the length of the transition. */
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* The caret is the one piece of the interface that is always on screen when
+   someone is reading, and the default near-black disappears on near-black. */
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+::placeholder {
+  color: var(--color-ink-faint);
+}
+
+:root {
+  caret-color: var(--caret);
+}
+
+/* Scrollbars ship with browser defaults that belong to no design system. On a
+   page this dark an unstyled light scrollbar is the first thing that looks
+   bolted on, and on a trackpad it is always visible. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 2px solid var(--scrollbar-track);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}
+
+/* --------------------------------------------------------------- layout --- */
+
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+}
+
+.section {
+  position: relative;
+  padding-block: var(--space-3xl);
+}
+
+.section--tight { padding-block: var(--space-2xl); }
+
+/* A section head. The heading carries the section; there is no kicker above
+   it, so the space above the rule does the work a label used to. */
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-width: 46ch;
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-rule);
+}
+
+.head--wide { max-width: 60ch; }
+
+.head h2 {
+  font-size: var(--text-2xl);
+}
+
+.head p {
+  color: var(--color-ink-muted);
+  font-size: var(--text-md);
+  line-height: 1.6;
+}
+
+/* A short group label rather than a sentence heading. The FAQ uses these: four
+   groups of questions, where "Getting started" is a label for the group and
+   not a claim. It gets the rule and the space, at label size.
+
+   Declared after .head h2 on purpose. Both selectors weigh the same, so source
+   order decides, and the first version of this rule sat above it and lost —
+   which is how four FAQ labels ended up rendered at 49px. */
+.head--label h2 {
+  font-size: var(--text-lg);
+  letter-spacing: -0.015em;
+  color: var(--color-ink-muted);
+}
+
+.lede {
+  color: var(--color-ink-muted);
+  font-size: var(--text-md);
+  line-height: 1.6;
+  max-width: 52ch;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------ nav --- */
+
+.nav {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding-block: var(--space-2xs);
+  min-height: 4rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  text-decoration: none;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.brand img {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-left: var(--space-sm);
+}
+
+.nav__links a {
+  color: var(--color-ink-soft);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.nav__links a:hover {
+  color: var(--color-ink);
+}
+
+.nav__links a[aria-current='page'] {
+  color: var(--color-ink);
+}
+
+.nav__slot {
+  flex: 1;
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------- button --- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--shadow-accent);
+  transition:
+    background-color var(--dur-short) var(--ease-out),
+    border-color var(--dur-short) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-short) var(--ease-out);
+}
+
+/* State 1 hover. One signal: the fill lifts and the thrown light spreads. */
+.btn:hover,
+.btn.is-hover {
+  background: var(--color-accent-lit);
+  border-color: var(--color-accent-lit);
+  color: var(--color-accent-ink);
+  box-shadow: var(--shadow-accent-lit);
+}
+
+/* State 2 focus-visible. Drawn by the global rule; must not transition. */
+.btn:focus-visible,
+.btn.is-focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+/* State 3 active. A 1px push, the analogue of a key going down. */
+.btn:active,
+.btn.is-active {
+  transform: translateY(1px);
+}
+
+/* State 4 disabled. */
+.btn:disabled,
+.btn[aria-disabled='true'],
+.btn.is-disabled {
+  opacity: var(--state-disabled-opacity);
+  cursor: var(--state-disabled-cursor);
+  background: var(--color-paper-card);
+  border-color: var(--color-rule);
+  color: var(--color-ink-faint);
+  box-shadow: none;
+}
+
+/* State 5 loading. The label stays readable so the control does not resize. */
+.btn[data-state='loading'],
+.btn.is-loading {
+  cursor: progress;
+}
+
+.btn[data-state='loading']::before,
+.btn.is-loading::before {
+  content: '';
+  width: 0.7em;
+  height: 0.7em;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+/* States 6 and 7. Shipped so the control is complete; the store links never
+   resolve to these on the marketing site itself. */
+.btn[data-state='error'],
+.btn.is-error {
+  background: var(--color-paper-card);
+  border-color: var(--color-accent-text);
+  color: var(--color-accent-text);
+  box-shadow: var(--shadow-seam);
+}
+
+.btn[data-state='success'],
+.btn.is-success {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-paper);
+  box-shadow: var(--shadow-seam);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Secondary action. Outline, not a second fill: two filled pills in a row is
+   how a page ends up with two competing calls to action. */
+.btn--ghost {
+  background: transparent;
+  color: var(--color-ink);
+  border-color: var(--color-rule-strong);
+  box-shadow: none;
+}
+
+.btn--ghost:hover,
+.btn--ghost.is-hover {
+  background: var(--color-paper-card);
+  border-color: var(--color-ink-soft);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-seam);
+}
+
+/* Small inline text link with an arrow, used inside prose. */
+.link-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* The arrow glyph must not be orphaned onto its own line when the label wraps.
+   These are full sentences ("The full rules, both game modes, and what happens
+   when a connection drops"), not short labels, and `white-space: nowrap` on
+   one pushed a 580px line into a 282px viewport at the 320px floor, running the
+   text off the side of the screen. The text wraps; only the arrow is held
+   together, and it is pinned to the end of the last line rather than dropped. */
+.link-arrow::after {
+  white-space: nowrap;
+}
+
+.link-arrow::after {
+  content: '\2192';
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.link-arrow:hover::after {
+  transform: translateX(3px);
+}
+
+/* ----------------------------------------------------------------- hero --- */
+
+.hero {
+  position: relative;
+  padding-block: var(--space-xl) var(--space-3xl);
+  overflow: hidden;
+}
+
+.hero .glow--pink {
+  width: 62rem;
+  height: 62rem;
+  top: -26rem;
+  left: -18rem;
+  /* Multiplied by the scheme's --glow-opacity rather than replacing it, so one
+     placement value serves both grounds. A bare number here would be more
+     specific than the base rule and would silently defeat light mode. */
+  opacity: calc(0.85 * var(--glow-opacity));
+}
+
+.hero .glow--violet {
+  width: 48rem;
+  height: 48rem;
+  top: 6rem;
+  right: -16rem;
+  opacity: calc(0.7 * var(--glow-opacity));
+}
+
+.hero__grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: var(--space-2xl) var(--space-xl);
+  align-items: center;
+}
+
+.hero h1 {
+  font-size: var(--text-hero);
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+  color: var(--color-ink);
+}
+
+/* One accent word inside an upright headline. Emphasis is carried by colour,
+   never by an italic and never by a gradient clipped to the type. */
+.hero h1 .hl {
+  color: var(--color-accent);
+}
+
+.hero__sub {
+  color: var(--color-ink-muted);
+  font-size: var(--text-md);
+  line-height: 1.6;
+  margin-bottom: var(--space-lg);
+  max-width: 44ch;
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.hero__note {
+  margin-top: var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--color-ink-faint);
+}
+
+/* ------------------------------------------------------- the question ----- */
+
+/* The product's raw material, set at size. A single real question doing the
+   work a hero illustration would otherwise do. */
+.question {
+  font-family: var(--font-display);
+  font-size: var(--text-quote);
+  font-weight: 500;
+  line-height: 1.28;
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
+  max-width: 22ch;
+  text-wrap: balance;
+}
+
+.question__mark {
+  display: block;
+  font-size: 2.4em;
+  line-height: 0.6;
+  color: var(--color-accent);
+  margin-bottom: var(--space-2xs);
+}
+
+/* --------------------------------------------------------------- scenes --- */
+
+/*
+  Illustrated game states.
+
+  These are not screenshots. Every string in them is the shipping app's own copy
+  (from app/game.tsx and the seeded decks) and every layout detail is drawn
+  here, so they can be styled, scaled and re-themed like anything else on the
+  page. They are labelled as illustrations in the markup.
+
+  A scene is an object on screen, not a card in a grid, so it is allowed to
+  carry a border. It is never nested inside another bordered surface: where a
+  scene sits in a section it replaces the section's panel rather than sitting
+  inside one.
+*/
+
+.scene {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper-raised);
+  box-shadow: var(--light-catch), var(--shadow-raised);
+}
+
+.scene__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  font-size: var(--text-micro);
+  letter-spacing: 0.02em;
+  color: var(--color-ink-faint);
+}
+
+/* A tag is a label, not data, so it is set in the body face with optical
+   small-caps sizing rather than in monospace. */
+.scene__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-paper-sunk);
+  border: 1px solid var(--color-rule);
+  color: var(--color-ink-soft);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.scene__tag--live {
+  border-color: var(--color-accent-hairline);
+  color: var(--color-accent-text);
+  background: var(--color-accent-wash);
+}
+
+.scene__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.scene__question {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
+  text-wrap: balance;
+}
+
+.scene__caption {
+  font-size: var(--text-sm);
+  color: var(--color-ink-soft);
+  line-height: 1.5;
+}
+
+/* A player's own answer, still sealed. */
+.scene__sealed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-sunk);
+  border: 1px dashed var(--color-rule-strong);
+  color: var(--color-ink-faint);
+  font-size: var(--text-sm);
+}
+
+.scene__sealed span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A revealed answer. The lit edge is the moment the whole product exists for.
+
+   This used to be a 2px accent border-left, which is the single most
+   recognisable tell in generated UI. A full hairline in a warm tint, plus a top
+   light catch, reads as "this one is open" just as clearly and is a border
+   rather than a tab. */
+.scene__revealed {
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-card);
+  border: 1px solid var(--color-accent-border);
+  box-shadow: var(--light-catch);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-ink);
+}
+
+.scene__revealed strong {
+  display: block;
+  font-size: var(--text-micro);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-accent-text);
+  margin-bottom: var(--space-3xs);
+}
+
+/* The room code. Mono, spaced, four blocks. This is literal data. */
+.code {
+  display: flex;
+  gap: var(--space-2xs);
+}
+
+.code span {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 3.2rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-sunk);
+  border: 1px solid var(--color-rule-strong);
+  box-shadow: var(--light-catch);
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.code--inline {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.code--inline span {
+  width: 1.7rem;
+  height: 2.1rem;
+  font-size: var(--text-base);
+}
+
+/* The two-column answer / prediction layout from the How Well Do You Know Me
+   deck, which is the mechanic the app's game screen is built around. */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2xs);
+}
+
+.split > div {
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-sunk);
+  border: 1px solid var(--color-rule);
+}
+
+.split dt {
+  font-size: var(--text-micro);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-faint);
+  margin-bottom: var(--space-3xs);
+}
+
+.split dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--color-ink);
+}
+
+/* Reaction bubbles, using the app's four real reaction types. */
+.reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+}
+
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: 0.2rem 0.55rem 0.2rem 0.45rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-paper-sunk);
+  border: 1px solid var(--color-rule);
+  font-size: var(--text-micro);
+  color: var(--color-ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.reaction i {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+  font-style: normal;
+}
+
+/* The hero cluster: a sealed card overlapping a revealed one, which is the
+   product's whole mechanic in one picture. */
+.stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+}
+
+.stack .scene--back {
+  margin-inline-start: var(--space-lg);
+  border-color: var(--color-rule);
+  background: var(--color-paper-sunk);
+  box-shadow: none;
+}
+
+.stack .scene--front {
+  margin-inline-end: var(--space-lg);
+  border-color: var(--color-accent-border);
+  box-shadow: var(--light-catch), var(--shadow-float);
+}
+
+.stack .scene--front .scene__bar {
+  color: var(--color-accent-text);
+}
+
+/* --------------------------------------------------------------- steps --- */
+
+/* A numbered sequence where the count is the information: there are exactly
+   four things that happen, in this order, and the reader is going to play
+   through them. The number is the step, not a decoration on the section. */
+.steps {
+  counter-reset: step;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.step {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+  gap: var(--space-md) var(--space-xl);
+  align-items: start;
+}
+
+.step__head {
+  min-width: 0;
+}
+
+.step__num {
+  display: inline-grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  margin-bottom: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-edge);
+  border: 1px solid var(--color-accent-border-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-accent-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.step h3 {
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-2xs);
+}
+
+.step__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.step__body p {
+  color: var(--color-ink-muted);
+  font-size: var(--text-md);
+  line-height: 1.6;
+}
+
+/* ---------------------------------------------------------------- specs --- */
+
+/* Replaces the three-big-numbers-in-cards row.
+
+   The information is real and worth keeping: how many players, how many
+   questions, how long a game runs. What made the old version feel generated
+   was the presentation, not the content, so this is the same content set as a
+   ruled specification. A reader scanning a spec expects it to be tabular; a
+   reader scanning three identical cards expects a pricing table. */
+.specs {
+  margin: 0;
+  border-top: 1px solid var(--color-rule);
+}
+
+.specs > div {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 8fr);
+  gap: var(--space-2xs) var(--space-xl);
+  align-items: baseline;
+  padding-block: var(--space-md);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.specs dt {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.specs dd {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-md);
+  line-height: 1.6;
+}
+
+.specs dd b {
+  color: var(--color-ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- decks --- */
+
+/* The catalogue. A ruled list of rows, not a grid of same-size cards: a card
+   per deck is the lazy container, and eight of them in a 2-up grid turns the
+   page into a pricing table it is not. */
+.decks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 var(--space-2xl);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-rule);
+}
+
+.deck {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2xs) var(--space-sm);
+  align-content: start;
+  padding-block: var(--space-lg);
+  border-bottom: 1px solid var(--color-rule);
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+
+.deck:hover {
+  background: var(--color-paper-raised);
+}
+
+.deck__mark {
+  grid-row: 1 / span 2;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--color-accent);
+  flex: none;
+}
+
+.deck__name {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2xs);
+  flex-wrap: wrap;
+}
+
+.deck__badge {
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-violet-wash);
+  border: 1px solid var(--color-violet-border);
+  /* 0.6875rem, not 0.625rem. Ten pixels is legible on a phone held at arm's
+     length by someone who is also trying to read the question underneath it. */
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+
+.deck__desc {
+  grid-column: 2;
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+/* Real questions quoted from the deck, so a row previews the actual content
+   rather than just naming it. */
+.deck__samples {
+  grid-column: 1 / -1;
+  margin: var(--space-2xs) 0 0;
+  padding: 0 0 0 calc(1.75rem + var(--space-sm));
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.deck__samples li {
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--color-ink-muted);
+  max-width: 44ch;
+}
+
+.deck__meta {
+  grid-column: 1 / -1;
+  margin-top: var(--space-3xs);
+  padding-left: calc(1.75rem + var(--space-sm));
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--color-ink-faint);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The full-width variant used on the catalogue page, where each deck can carry
+   three real questions. */
+.decks--wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.deck--wide {
+  grid-template-columns: auto minmax(0, 3fr) minmax(0, 7fr);
+  gap: var(--space-2xs) var(--space-lg);
+}
+
+.deck--wide .deck__samples {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  padding-left: 0;
+  margin-top: 0;
+}
+
+.deck--wide .deck__meta {
+  grid-column: 2 / -1;
+  padding-left: 0;
+  margin-top: var(--space-2xs);
+}
+
+/* -------------------------------------------------------------- samples --- */
+
+/* Six real questions, as a ruled two-column list. Same vocabulary as .claims
+   and .specs: a rule above the group, a rule under each row, nothing boxed.
+
+   The questions are the argument here, so they get the display face at reading
+   size and the room to wrap. No motion, no scroll region, nothing to discover:
+   the reader either reads them or scrolls past, and both are equally valid. */
+.samples__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-2xl);
+  border-top: 1px solid var(--color-rule);
+}
+
+.samples__item {
+  padding-block: var(--space-md);
+  border-bottom: 1px solid var(--color-rule);
+  font-family: var(--font-display);
+  /* --text-md, not --text-lg. At the display size a 489px column fits about 28
+     characters, so every one of these questions broke across three lines and
+     the block stood 688px tall for six sentences. These are read, not
+     displayed, so they take reading size in the display face. */
+  font-size: var(--text-md);
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--color-ink-soft);
+  text-wrap: pretty;
+}
+
+/* -------------------------------------------------------------- privacy --- */
+
+.privacy__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+  gap: var(--space-lg) var(--space-2xl);
+  align-items: start;
+}
+
+.claims {
+  margin: 0;
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--color-rule);
+}
+
+.claim {
+  display: grid;
+  gap: var(--space-3xs);
+  padding-block: var(--space-md);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.claim dt {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-base);
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
+}
+
+.claim dd {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  max-width: 58ch;
+}
+
+/* ------------------------------------------------------------------ cta --- */
+
+/* The closing panel. Left aligned, with the warm light anchored to the same
+   edge as the type. A centred box of stacked buttons is the shape every
+   generated landing page converges on, so this one is deliberately not that. */
+.cta {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-rule);
+  background: var(--color-paper-raised);
+  box-shadow: var(--light-catch), var(--shadow-float);
+  padding: var(--space-2xl);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.cta .glow--ember {
+  width: 44rem;
+  height: 44rem;
+  top: -18rem;
+  left: -20rem;
+  opacity: calc(0.55 * var(--glow-opacity));
+}
+
+.cta h2 {
+  position: relative;
+  z-index: 1;
+  font-size: var(--text-2xl);
+  max-width: 16ch;
+}
+
+.cta p {
+  position: relative;
+  z-index: 1;
+  color: var(--color-ink-muted);
+  font-size: var(--text-md);
+  max-width: 46ch;
+}
+
+.cta__actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* --------------------------------------------------------------- footer --- */
+
+.foot {
+  padding-block: var(--space-2xl) var(--space-xl);
+}
+
+.foot__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-lg);
+  border-top: 1px solid var(--color-rule);
+  padding-top: var(--space-lg);
+}
+
+.foot__mark {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-ink);
+}
+
+.foot__tag {
+  color: var(--color-ink-faint);
+  font-size: var(--text-sm);
+}
+
+.foot__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: var(--text-sm);
+}
+
+.foot__links a {
+  color: var(--color-ink-soft);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.foot__links a:hover {
+  color: var(--color-ink);
+  text-decoration: underline;
+}
+
+.foot__legal {
+  flex-basis: 100%;
+  max-width: none;
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-rule);
+  font-size: var(--text-micro);
+  color: var(--color-ink-faint);
+}
+
+/* ---------------------------------------------------------- page header --- */
+
+.pagehead {
+  position: relative;
+  padding-block: var(--space-xl) var(--space-2xl);
+  overflow: hidden;
+}
+
+.pagehead .glow--violet {
+  width: 44rem;
+  height: 44rem;
+  top: -20rem;
+  right: -12rem;
+  opacity: 0.6;
+}
+
+.pagehead__inner {
+  position: relative;
+  z-index: 1;
+  max-width: 48ch;
+  border-top: 1px solid var(--color-rule);
+  padding-top: var(--space-lg);
+}
+
+.pagehead h1 {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-sm);
+}
+
+.pagehead p {
+  color: var(--color-ink-muted);
+  font-size: var(--text-md);
+  line-height: 1.6;
+}
+
+/* ---------------------------------------------------------------- panel --- */
+
+/* A section that holds an illustrated scene. It is NOT a card: no background,
+   no border, no radius. Nesting a bordered scene inside a bordered panel is
+   the failure this class exists to prevent, so when a section needs a panel
+   around a scene it gets a rule and a light catch instead. */
+.panel {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: var(--space-xl);
+  align-items: center;
+  padding-block: var(--space-xl);
+  padding-inline: var(--space-2xs);
+  border-top: 1px solid var(--color-rule);
+  box-shadow: var(--light-catch);
+}
+
+/* ---------------------------------------------------------------- extras --- */
+
+/* Two modes, side by side. Each carries its own state illustration, so the
+   difference between them is shown rather than described twice. */
+.modes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2xl);
+  align-items: start;
+}
+
+.mode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 2px solid var(--color-accent);
+}
+
+.mode__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.mode__head h3 {
+  font-size: var(--text-lg);
+}
+
+.mode__head p {
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.mode__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.mode__list li {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr);
+  gap: var(--space-2xs);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-ink-muted);
+}
+
+.mode__list li::before {
+  content: '';
+  width: 0.35rem;
+  height: 0.35rem;
+  margin-top: 0.55em;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* The enforced rules. A real table, because these are rules with values and a
+   list would imply an order they do not have. */
+.rules {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.rules caption {
+  text-align: left;
+  color: var(--color-ink-faint);
+  font-size: var(--text-sm);
+  padding-bottom: var(--space-sm);
+}
+
+.rules th,
+.rules td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-rule);
+  vertical-align: top;
+}
+
+.rules thead th {
+  font-size: var(--text-micro);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-faint);
+  border-bottom-color: var(--color-rule-strong);
+  white-space: nowrap;
+}
+
+.rules tbody th {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-base);
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
+  width: 34%;
+}
+
+.rules td {
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.rules tbody tr:last-child th,
+.rules tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Q and A. A native disclosure, so it is keyboard accessible and works with no
+   script at all. */
+.qa__item {
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.qa__q {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: var(--space-md) 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
+  cursor: pointer;
+  list-style: none;
+  min-width: 0;
+}
+
+.qa__q::-webkit-details-marker { display: none; }
+
+.qa__q::after {
+  content: '+';
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-lg);
+  color: var(--color-accent);
+}
+
+.qa__item[open] .qa__q::after {
+  content: '\2212';
+}
+
+.qa__a {
+  padding-bottom: var(--space-lg);
+  max-width: var(--measure);
+}
+
+.qa__a p {
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  line-height: 1.65;
+}
+
+.qa__a p + p { margin-top: var(--space-2xs); }
+
+/* A quiet aside, for the honest caveats. Deliberately not a card, so a reader
+   who only skims still meets them in the flow of the prose. */
+.callout {
+  padding-block: var(--space-md);
+  padding-inline: 0 var(--space-md);
+  border-top: 1px solid var(--color-rule-strong);
+  max-width: var(--measure);
+}
+
+.callout strong {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: var(--space-3xs);
+}
+
+.callout p {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+}
+
+/* --------------------------------------------------------------- extras 2 --- */
+
+/* Spacing utilities, kept as classes rather than inline styles so the spacing
+   scale stays inspectable in one place. */
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+.mt-xl { margin-top: var(--space-xl); }
+.measure-tight { max-width: 52ch; }
+.title-sm { font-size: var(--text-xl); }
+.mb-sm { margin-bottom: var(--space-sm); }
+
+/* Two columns of copy, for the closing CTA region. */
+.split-note {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-lg) var(--space-2xl);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--color-accent-text);
+  background: var(--color-paper-sunk);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  padding: 0.05em 0.3em;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------- mobile nav --- */
+
+/* A native disclosure for small screens. The desktop link row is removed at
+   40rem, so without this a phone visitor would have no navigation at all. */
+.nav__toggle { display: none; }
+
+.nav__menu {
+  position: absolute;
+  inset-inline: var(--space-sm);
+  top: calc(100% - var(--space-2xs));
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-sm);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper-card);
+  border: 1px solid var(--color-rule-strong);
+  box-shadow: var(--shadow-float);
+}
+
+.nav__menu a {
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-soft);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.nav__menu a:hover,
+.nav__menu a:focus-visible {
+  background: var(--color-paper-sunk);
+  color: var(--color-ink);
+}
+
+/* ---------------------------------------------------------------- policy --- */
+
+/* Generated from docs/privacy-policy.md by tools/build-policy-page.mjs, so the
+   markdown stays the single source of truth. */
+.policy {
+  padding-block: var(--space-lg) var(--space-3xl);
+  max-width: var(--measure);
+}
+
+.policy h1 { font-size: var(--text-2xl); margin-bottom: var(--space-sm); }
+
+.policy h2 {
+  font-size: var(--text-lg);
+  margin-top: var(--space-2xl);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-rule);
+}
+
+.policy h3 {
+  font-size: var(--text-md);
+  margin-top: var(--space-lg);
+}
+
+.policy p,
+.policy li {
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  max-width: none;
+}
+
+.policy strong { color: var(--color-ink); font-weight: 600; }
+
+.policy ul,
+.policy ol { padding-left: var(--space-md); margin: 0 0 var(--space-sm); }
+
+.policy li { margin-bottom: var(--space-2xs); }
+
+.policy hr { height: 1px; border: 0; background: var(--color-rule); margin-block: var(--space-2xl); }
+
+.policy table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-md);
+  font-size: var(--text-sm);
+  display: block;
+  overflow-x: auto;
+}
+
+.policy th,
+.policy td {
+  padding: var(--space-xs) var(--space-sm);
+  text-align: left;
+  border: 1px solid var(--color-rule);
+  vertical-align: top;
+}
+
+.policy th {
+  background: var(--color-paper-raised);
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.policy td { color: var(--color-ink-muted); }
+.policy td:first-child { color: var(--color-ink); }
+
+/* ------------------------------------------------------------- entrance --- */
+
+/* One authored moment, on the hero only. A page where every section fades in
+   on scroll never settles, and the resting state is visible regardless: the
+   animation only plays where the page is first read. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero__grid > * {
+    animation: rise var(--dur-slow) var(--ease-out) backwards;
+  }
+
+  .hero__grid > *:nth-child(2) { animation-delay: 110ms; }
+  .stack .scene--front { animation: rise var(--dur-slow) var(--ease-out) 200ms backwards; }
+  .stack .scene--back { animation: rise var(--dur-slow) var(--ease-out) 320ms backwards; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The one entrance animation on the site is already written inside a
+     prefers-reduced-motion: no-preference block, so a reader who asked for
+     less motion never receives it in the first place. What is left is the
+     unconditional hover and focus transitions: collapsed to a state change
+     rather than a fade. Scroll-linked behaviour stays, because it follows the
+     reader instead of running ahead of them. */
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ------------------------------------------------------------ responsive -- */
+
+/* Below 22rem (352px) there is not room for the wordmark beside the call to
+   action and the menu. The mark stays, because a 28px icon is still a link home
+   and still carries "DEEPER" as its accessible name; only the visible text goes.
+   320px is a real device width, not a hypothetical one.
+
+   The threshold is measured, not guessed. With the tightened gap and the slimmer
+   CTA the nav row needs 310px with the wordmark and 258px without it, so it
+   fits from 375px (332px of content) up and does not fit at 320px (282px). The
+   first attempt used 26rem, which also hid the wordmark at 375px where there was
+   room for it, so the brand was weaker than it needed to be on most phones.
+
+   The wordmark is a bare text node in the page markup, so it is wrapped in a
+   span by tools/build-theme-toggle.mjs: a responsive rule cannot target a text
+   node, and hiding the text by other means takes the link home with it. */
+@media (max-width: 22rem) {
+  .brand__name { display: none; }
+}
+
+@media (max-width: 62rem) {
+  .hero__grid,
+  .step,
+  .privacy__grid,
+  .panel,
+  .modes,
+  .split-note {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero__grid { gap: var(--space-xl); }
+  .decks { grid-template-columns: minmax(0, 1fr); }
+  .stack { max-width: 30rem; }
+
+  /* Six questions of 40-60 characters need more than half a tablet column to
+     read without breaking mid-clause every second line. */
+  .samples__list { grid-template-columns: minmax(0, 1fr); }
+
+  .deck--wide { grid-template-columns: auto minmax(0, 1fr); }
+  .deck--wide .deck__samples { grid-column: 2; grid-row: auto; }
+  .deck--wide .deck__meta { grid-column: 2; }
+}
+
+@media (max-width: 40rem) {
+  .nav__links { display: none; }
+  .nav__toggle { display: inline-flex; }
+
+  /* The nav row does not fit at 320px and the overflow was invisible.
+     Measured: brand 75 + three 24px gaps + "Get the app" 127 + Menu 88 = 362px
+     of content in a 282px viewport, so the Menu disclosure was pushed 100px off
+     the right edge. `overflow-x: clip` on the root then hid the overflow from
+     every scroll-width measurement, which is why this survived years of
+     "no horizontal overflow" checks: the page really did not scroll, the
+     primary mobile navigation was simply unreachable.
+
+     Three changes, all measured, none of which removes a control:
+       - the gap drops from 24px to 12px, saving 36px
+       - the CTA sheds its horizontal padding, saving ~16px
+       - the brand drops its wordmark below 26rem, saving ~50px, and keeps the
+         mark, so the link home and its accessible name both survive */
+  .nav { gap: var(--space-xs); }
+
+  .nav .btn { padding-inline: var(--space-sm); }
+
+  .section { padding-block: var(--space-2xl); }
+
+  .cta { padding: var(--space-lg) var(--space-md); }
+
+  .step { gap: var(--space-sm); }
+  .step__num { margin-bottom: var(--space-2xs); }
+
+  .scene { padding: var(--space-sm); }
+  .code span { width: 2.2rem; height: 2.8rem; font-size: var(--text-lg); }
+  .split { grid-template-columns: minmax(0, 1fr); }
+
+  .specs > div,
+  .deck { grid-template-columns: minmax(0, 1fr); }
+  .specs dt { font-size: var(--text-md); }
+
+  /* Qualified with the base class so it outranks the two-column `.deck--wide`
+     rule from the 62rem block. The two selectors weigh the same on their own,
+     and relying on source order for a cascade tie is how this ended up
+     rendering two columns at 320px. */
+  .deck.deck--wide { grid-template-columns: minmax(0, 1fr); }
+
+  .deck__mark { grid-row: auto; }
+  .deck__samples,
+  .deck__meta { padding-left: 0; }
+
+  /* Reset the column placement the wide layout set. Leaving `grid-column: 2` in
+     place while the template has one column creates an implicit second track,
+     and the mark's own column collapses to zero width. */
+  .deck .deck__desc,
+  .deck .deck__samples,
+  .deck .deck__meta { grid-column: 1 / -1; grid-row: auto; }
+
+  .rules thead { display: none; }
+  .rules tbody th,
+  .rules tbody td { display: block; width: auto; padding-inline: 0; }
+  .rules tbody td { padding-top: 0; }
+  .rules tbody tr { padding-block: var(--space-sm); border-bottom: 1px solid var(--color-rule); }
+  .rules tbody tr:last-child { border-bottom: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* theme-toggle ------------------------------------------------------------------
+ * One button, two states. The sun is the target when the page is dark (press it
+ * to get light) and the moon is the target when the page is light, so the icon
+ * always shows what the press will do rather than what is currently true.
+ *
+ * The rule above is what makes this safe without JavaScript: the control is
+ * hidden until the script sets data-theme-ready on the root, so a reader is
+ * never shown a button that does nothing. Light mode itself does not depend on
+ * the script at all.
+ *
+ * min-height is 44px, not 40: this is a small target at the top of a page, and
+ * the site audit holds every control to the same floor. */
+html:not([data-theme-ready]) .theme-toggle { display: none; }
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-raised);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  transition: color var(--dur-short) var(--ease-out),
+              border-color var(--dur-short) var(--ease-out),
+              background-color var(--dur-short) var(--ease-out);
+}
+
+/* One control, two homes, and exactly one visible at any width. See the note on
+   BUTTON_BAR in tools/build-theme-toggle.mjs for the measurement that forces
+   this: at 375px the nav row is already 314px of a 332px viewport before the
+   control is added.
+
+   The text label lives in the markup on the menu instance only. It was
+   originally a CSS ::after reading attr(data-label), and the attribute was never
+   set, so the row rendered as a bare 22px icon with no label at all. Real text
+   in the DOM is also what a screen reader gets before the script has run. */
+.theme-toggle--menu,
+.theme-toggle__text { display: none; }
+
+@media (max-width: 40rem) {
+  .theme-toggle--bar { display: none; }
+  .theme-toggle--menu {
+    display: inline-flex;
+    /* Inside the disclosure it is a full-width row, not a 44px square, so it
+       matches the menu's own links rather than floating in a corner. */
+    width: 100%;
+    justify-content: flex-start;
+    gap: var(--space-2xs);
+    background: transparent;
+    border-color: transparent;
+  }
+  .theme-toggle--menu .theme-toggle__text {
+    display: inline;
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    color: var(--color-ink);
+  }
+}
+
+.theme-toggle:hover {
+  color: var(--color-ink);
+  border-color: var(--color-rule-strong);
+  background: var(--color-paper-card);
+}
+
+.theme-toggle:active {
+  background: var(--color-paper-sunk);
+}
+
+.theme-toggle__icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+/* Which icon is showing is decided by the same two conditions the tokens use:
+   the system preference, and an explicit attribute that overrides it. */
+.theme-toggle__icon--sun { display: block; }
+.theme-toggle__icon--moon { display: none; }
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .theme-toggle__icon--sun { display: none; }
+  :root:not([data-theme='dark']) .theme-toggle__icon--moon { display: block; }
+}
+
+:root[data-theme='light'] .theme-toggle__icon--sun { display: none; }
+:root[data-theme='light'] .theme-toggle__icon--moon { display: block; }

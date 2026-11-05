@@ -39,3 +39,7 @@ Thumbs.db
 
 expo-env.d.ts
 # @end expo-cli
+
+# Generated artwork contact sheet (tools/preview-assets.mjs output).
+# The PNGs in assets/ ARE committed — only this throwaway review page is not.
+tools/preview-assets.html

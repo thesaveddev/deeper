@@ -2,13 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { getQuestions } from '@deeper/content';
 import { canStartGame, nextQuestionState, phaseAfterAnswerSubmission, phaseAfterRevealReady, type CategoryId, type GameMode, type Player, type ReactionType, type RoomSnapshot, type RoomStatus, type GamePhase, TOTAL_QUESTIONS, MAX_PLAYERS, MAX_ANSWER_LENGTH } from '@deeper/shared';
 
+/** The question set a room plays. Kept as a name so the shape stays in one place. */
+export type RoomQuestions = ReturnType<typeof getQuestions>;
+
 const alphabet = 'ABCDEFGHJKLMNPQRTUVWXYZ2346789';
 const now = () => new Date().toISOString();
 
 export interface RoomPlayer extends Player { socketId?: string | undefined; }
 export interface RoomState {
   roomId: string; roomCode: string; hostPlayerId: string; categoryId: CategoryId; maxPlayers: number; status: RoomStatus;
-  players: Map<string, RoomPlayer>; questions: ReturnType<typeof getQuestions>; questionNumber: number; phase: GamePhase | null;
+  players: Map<string, RoomPlayer>; questions: RoomQuestions; questionNumber: number; phase: GamePhase | null;
   answers: Map<string, string>; predictions: Map<string, string>; revealed: Set<string>; reactions: Map<string, ReactionType>; consumedCredit: boolean; lastActivityAt: number; endedReason?: RoomSnapshot['endedReason'];
   gameMode: GameMode; scores: Map<string, number>;
 }
@@ -17,9 +20,9 @@ export class GameRoom {
   readonly state: RoomState;
   /** Set by the registry so every mutation mirrors state to Redis. */
   private onChange: ((room: GameRoom) => void) | null = null;
-  constructor(categoryId: CategoryId, host: RoomPlayer, maxPlayers = 8, restored?: RoomState) {
+  constructor(categoryId: CategoryId, host: RoomPlayer, maxPlayers = 8, restored?: RoomState, questions?: RoomQuestions) {
     const gameMode: GameMode = categoryId === 'know-me' ? 'prediction' : 'standard';
-    this.state = restored ?? { roomId: randomUUID(), roomCode: makeRoomCode(), hostPlayerId: host.playerId, categoryId, maxPlayers, status: 'lobby', players: new Map([[host.playerId, host]]), questions: getQuestions(categoryId, TOTAL_QUESTIONS), questionNumber: 0, phase: null, answers: new Map(), predictions: new Map(), revealed: new Set(), reactions: new Map(), consumedCredit: false, lastActivityAt: Date.now(), gameMode, scores: new Map() };
+    this.state = restored ?? { roomId: randomUUID(), roomCode: makeRoomCode(), hostPlayerId: host.playerId, categoryId, maxPlayers, status: 'lobby', players: new Map([[host.playerId, host]]), questions: questions ?? getQuestions(categoryId, TOTAL_QUESTIONS), questionNumber: 0, phase: null, answers: new Map(), predictions: new Map(), revealed: new Set(), reactions: new Map(), consumedCredit: false, lastActivityAt: Date.now(), gameMode, scores: new Map() };
   }
   /** Rebuild a live room from state restored out of Redis. */
   static fromState(state: RoomState): GameRoom {

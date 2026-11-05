@@ -1,0 +1,329 @@
+/* Impeccable · surface: marketing (Persuade) · mode: polish
+ * world: near-black room, warm light, generous radii, one accent
+ *
+ * The visual world is preserved. What changed in this pass is the machinery:
+ * the depth system, the type palette, and the browser surfaces.
+ *
+ * Type note: Plus Jakarta Sans was replaced. It is on every "AI sites all
+ * converge on this" list, and a site whose whole argument is that it does not
+ * sound generated should not be set in the most generated body face available.
+ * Schibsted Grotesk is a low-contrast humanist grotesque with none of the
+ * fashion-house gloss. Bricolage Grotesque stays as the display voice and
+ * JetBrains Mono stays for literal data: room codes, counts, ordinals.
+ *
+ * Depth note: the previous pass used zero-offset coloured halos, which read as
+ * decoration pretending to be shadow. On a near-black surface elevation comes
+ * from three stacked, offset, blurred layers instead: a dark separation shadow,
+ * a wider ambient shadow, and a one-pixel inset light catch along the top edge.
+ *
+ * Nothing in styles.css may declare a raw colour or a raw font-family. If a
+ * value is needed that is not here, it is added here first.
+ *
+ * LIGHT MODE note. The world is one world seen under two lights. The hue is
+ * held at 305 and the accent keeps a single hue, because a light scheme that
+ * re-picks its colours is a second brand wearing the first one's name. What
+ * changes is the ground and the ink, and the two blend-dependent layers:
+ * a grain set in `overlay` and a light catch set to white both mean something
+ * completely different once the ground is paper instead of a dark room.
+ *
+ * Every ink step below is measured, not chosen by eye, with
+ * tools/contrast-math.mjs, against all four light surfaces. The direction
+ * reverses: on a near-black ground, a lighter ink is a stronger ink, and on
+ * paper a lighter ink is a weaker one. So `faint` moves from 62% lightness in
+ * dark to 52% in light, where it is the darkest usable step rather than the
+ * lightest.
+ */
+
+:root {
+  /* ---- surfaces ----------------------------------------------------------
+     Warm near-black. The hue sits toward 300 (a dusty violet-pink) so the
+     accent reads as light in a room rather than as a coloured overlay on grey. */
+  --color-paper:        oklch(13% 0.016 305);
+  --color-paper-raised: oklch(18% 0.018 305);
+  --color-paper-card:   oklch(21% 0.020 305);
+  --color-paper-sunk:   oklch(10% 0.013 305);
+
+  /* ---- ink ---------------------------------------------------------------
+     Off-white, tinted. Every neutral carries chroma: a zero-chroma grey on a
+     near-black field reads dead flat. Measured with tools/contrast-math.mjs;
+     the faint step is 62% because 56% gave 4.30:1 on the page and 3.80:1 on a
+     card, both under AA for the 12px metadata it carries. */
+  --color-ink:       oklch(97% 0.008 305);
+  --color-ink-muted: oklch(80% 0.014 305);
+  --color-ink-soft:  oklch(70% 0.016 305);
+  --color-ink-faint: oklch(62% 0.018 305);
+
+  /* ---- rules ------------------------------------------------------------- */
+  --color-rule:        oklch(32% 0.022 305);
+  --color-rule-strong: oklch(44% 0.028 305);
+
+  /* ---- accent ------------------------------------------------------------
+     One hue. The hot pink fills the primary action, the focus ring and the
+     illustrated reveal. The violet that lives in the app icon is confined to
+     ambient light and gradients; it is never a second call to action and never
+     sits beside pink in the same word. */
+  --color-accent:      oklch(66% 0.215 8);
+  --color-accent-lit:  oklch(73% 0.185 14);
+  --color-accent-ink:  oklch(16% 0.022 8);
+  --color-accent-text: oklch(81% 0.125 10);
+  --color-violet:      oklch(64% 0.200 295);
+  --color-ember:       oklch(74% 0.145 45);
+  --color-focus:       oklch(73% 0.185 14);
+
+  --color-accent-wash:         oklch(66% 0.215 8 / 0.1);
+  --color-accent-edge:         oklch(66% 0.215 8 / 0.14);
+  --color-accent-border:       oklch(66% 0.215 8 / 0.35);
+  --color-accent-border-strong:oklch(66% 0.215 8 / 0.4);
+  --color-accent-hairline:     oklch(66% 0.215 8 / 0.45);
+  --color-violet-wash:         oklch(64% 0.200 295 / 0.16);
+  --color-violet-border:       oklch(64% 0.200 295 / 0.4);
+
+  /* ---- type --------------------------------------------------------------
+     Display: a variable grotesque with real character, for the questions and
+     the headlines. Body: a humanist grotesque with a warm, unfashionable
+     voice. Mono: reserved for literal data, never as a costume for "technical". */
+  --font-display: 'Bricolage Grotesque', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-body:    'Schibsted Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-micro: 0.75rem;
+  --text-sm:    0.875rem;
+  --text-base:  1rem;
+  --text-md:    1.0625rem;
+  --text-lg:    clamp(1.25rem, 1.1rem + 0.7vw, 1.6rem);
+  --text-xl:    clamp(1.6rem, 1.35rem + 1.2vw, 2.25rem);
+  --text-2xl:   clamp(2rem, 1.6rem + 2vw, 3.25rem);
+  --text-hero:  clamp(2.5rem, 1.5rem + 3.4vw, 4rem);
+  --text-quote: clamp(1.35rem, 1.1rem + 1.2vw, 2rem);
+
+  /* ---- spacing: 4pt scale ------------------------------------------------ */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs:  0.75rem;
+  --space-sm:  1rem;
+  --space-md:  1.5rem;
+  --space-lg:  2rem;
+  --space-xl:  2.75rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+  --space-4xl: 8.5rem;
+
+  --page-gutter: clamp(1.25rem, 5vw, 5rem);
+  --page-max: 76rem;
+  /* 68ch, inside the 65-75ch band for body copy. The previous 64ch was one
+     character short of it and made long paragraphs feel cramped. */
+  --measure: 68ch;
+
+  /* ---- shape -------------------------------------------------------------
+     One radius system, taken from the app: 8 / 14 / 20 / 28. Pill is reserved
+     for small inline chips so it never competes with a panel. */
+  --radius-sm:   8px;
+  --radius-md:   14px;
+  --radius-lg:   20px;
+  --radius-xl:   28px;
+  --radius-pill: 999px;
+
+  /* ---- depth -------------------------------------------------------------
+     Every shadow carries an offset and a blur. There is no zero-offset
+     coloured halo anywhere in the system; that is decoration, not depth. The
+     accent shadow is offset downward and blurred so it reads as light thrown
+     by a raised surface rather than as a glow stuck to it. */
+  --shadow-seam:    0 1px 2px -1px oklch(0% 0 0 / 0.7);
+  --shadow-raised:  0 2px 6px -3px oklch(0% 0 0 / 0.65), 0 16px 32px -20px oklch(0% 0 0 / 0.85);
+  --shadow-float:   0 4px 10px -6px oklch(0% 0 0 / 0.6), 0 28px 56px -28px oklch(0% 0 0 / 0.9);
+  --shadow-accent:  0 10px 26px -10px oklch(66% 0.215 8 / 0.5);
+  --shadow-accent-lit: 0 14px 34px -10px oklch(66% 0.215 8 / 0.62);
+  /* A one-pixel catch of light along a top edge. This is how a surface says
+     "raised" on a near-black field, where a drop shadow alone is invisible. */
+  --light-catch: inset 0 1px 0 oklch(100% 0 0 / 0.07);
+
+  /* ---- browser surfaces --------------------------------------------------
+     The parts nobody draws still carry the design. Scrollbars, the caret and
+     selection ship with browser defaults that belong to no system at all;
+     this is the cheapest signal that a page was built rather than assembled. */
+  --scrollbar-track: oklch(11% 0.014 305);
+  --scrollbar-thumb: oklch(30% 0.022 305);
+  --scrollbar-thumb-hover: oklch(40% 0.028 305);
+  --caret: var(--color-accent);
+
+  /* Masks need an opaque colour to cut against, so it is named here rather than
+     written as #000 inline. */
+  --color-mask: #000;
+
+  /* ---- motion ------------------------------------------------------------
+     Three named easings. No bounce, no overshoot on UI state. */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --dur-short: 140ms;
+  --dur-base:  240ms;
+  --dur-slow:  520ms;
+
+  --state-disabled-opacity: 0.45;
+  --state-disabled-cursor:   not-allowed;
+
+  /* ---- scheme plumbing ---------------------------------------------------
+     Two knobs the dark block above cannot know about, because they are about
+     how the layers composite rather than what colour they are.
+
+     --grain-blend: `overlay` on a near-black ground is barely visible, which is
+     the point of grain. The same `overlay` on near-white crushes to grey mud
+     and reads as a dirty screen, so light mode drops to `soft-light`, which
+     stays a texture instead of a stain.
+     --grain-opacity: follows from that, and is lower because soft-light on a
+     light ground does more work per unit than overlay on a dark one.
+     --glow-opacity: the glows are light sources photographed for a dark room.
+     At full strength on paper they are pale washed-out discs, so they are
+     pulled right back. They stay, because removing them would leave the light
+     half of the world with no light in it. */
+  --grain-blend: overlay;
+  --grain-opacity: 0.5;
+  --glow-opacity: 1;
+}
+
+/* ---- light ---------------------------------------------------------------
+   The same tokens, a different light. Applied two ways:
+
+     @media (prefers-color-scheme: light)  — the reader's system preference,
+                                            with no JavaScript and no stored
+                                            choice involved.
+     [data-theme='light']                  — an explicit choice from the toggle,
+                                            which must beat the system either
+                                            way, including when the reader
+                                            forces light on a dark system.
+
+   They are written once and referenced twice rather than duplicated, so the two
+   can never drift. `light dark` in color-scheme is what makes the browser's
+   own surfaces (scrollbars, form controls, the caret) follow. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+
+    /* Surfaces. Warm off-whites, hue held at 305. `card` is pure white so a
+       raised panel separates from the page by lightness alone; `sunk` is the
+       one step darker than the page, for insets. */
+    --color-paper:        oklch(98.5% 0.004 305);
+    --color-paper-raised: oklch(96% 0.006 305);
+    --color-paper-card:   oklch(100% 0 0);
+    --color-paper-sunk:   oklch(93.5% 0.008 305);
+
+    /* Ink. Measured against paper, raised, card and sunk; the worst case is
+       15.3 / 8.7 / 6.2 / 4.6, all over AA for body text. `faint` at 52% is the
+       binding constraint: it is the step that carries 12px metadata, which is
+       exactly the text that has the least room to be misread. */
+    --color-ink:       oklch(19% 0.020 305);
+    --color-ink-muted: oklch(37% 0.020 305);
+    --color-ink-soft:  oklch(45% 0.020 305);
+    --color-ink-faint: oklch(52% 0.020 305);
+
+    /* Rules get lighter, not darker, because a rule on paper is a subtraction
+       from the page. 86% is visible against both paper and card without
+       drawing a line through the layout. */
+    --color-rule:        oklch(86% 0.008 305);
+    --color-rule-strong: oklch(76% 0.014 305);
+
+    /* One accent hue, darkened. At 56% it reads 5.06:1 under white ink as a
+       fill AND 4.98:1 as text on the page, so the same token can be the
+       primary button and the pink text in a heading without a second value. */
+    --color-accent:      oklch(56% 0.205 8);
+    --color-accent-lit:  oklch(50% 0.190 14);
+    --color-accent-ink:  oklch(99% 0 0);
+    --color-accent-text: oklch(48% 0.190 10);
+    --color-violet:      oklch(46% 0.185 295);
+    --color-ember:       oklch(44% 0.140 45);
+    --color-focus:       oklch(50% 0.185 14);
+
+    /* The washes and borders are alpha over a light ground, so they carry more
+       alpha than their dark counterparts to reach the same visual weight. */
+    --color-accent-wash:         oklch(56% 0.205 8 / 0.10);
+    --color-accent-edge:         oklch(56% 0.205 8 / 0.16);
+    --color-accent-border:       oklch(56% 0.205 8 / 0.38);
+    --color-accent-border-strong:oklch(56% 0.205 8 / 0.48);
+    --color-accent-hairline:     oklch(56% 0.205 8 / 0.55);
+    --color-violet-wash:         oklch(46% 0.185 295 / 0.12);
+    --color-violet-border:       oklch(46% 0.185 295 / 0.36);
+
+    /* Depth inverts. On paper, elevation is carried by a soft dark shadow and
+       a hairline, not by a light catch: a white top edge is invisible on a
+       white surface, so the catch becomes the faintest cool tint instead of
+       pure white, which is what reads as a lit edge on paper in a print. */
+    --shadow-seam:    0 1px 2px -1px oklch(20% 0.020 305 / 0.14);
+    --shadow-raised:  0 2px 6px -3px oklch(20% 0.020 305 / 0.16), 0 16px 32px -20px oklch(20% 0.020 305 / 0.18);
+    --shadow-float:   0 4px 10px -6px oklch(20% 0.020 305 / 0.14), 0 28px 56px -28px oklch(20% 0.020 305 / 0.20);
+    --shadow-accent:  0 10px 26px -12px oklch(56% 0.205 8 / 0.34);
+    --shadow-accent-lit: 0 14px 34px -12px oklch(56% 0.205 8 / 0.40);
+    /* Not white. On paper the top edge catches a cool tint, not light. */
+    --light-catch: inset 0 1px 0 oklch(30% 0.030 305 / 0.06);
+
+    /* Browser surfaces follow the ground, or the scrollbar is the one element
+       on the page that belongs to no system at all. */
+    --scrollbar-track: oklch(95% 0.006 305);
+    --scrollbar-thumb: oklch(80% 0.012 305);
+    --scrollbar-thumb-hover: oklch(70% 0.018 305);
+    --caret: var(--color-accent);
+
+    /* Masks cut against the ground, so the mask colour is the ground. */
+    --color-mask: #fff;
+
+    --grain-blend: soft-light;
+    --grain-opacity: 0.35;
+    --glow-opacity: 0.5;
+  }
+}
+
+/* An explicit choice from the toggle. A selector rather than a media query, so
+   `data-theme="light"` wins on a dark system and `data-theme="dark"` wins on a
+   light one. Without JavaScript this block is never applied and the media query
+   above is the whole light mode.
+
+   THE VALUES BELOW ARE WRITTEN OUT TWICE, once in each block, and that is a real
+   duplication rather than a stylistic choice: CSS cannot apply one declaration
+   set to two different matching conditions, and light mode has to work both
+   from the system preference and from an explicit override.
+
+   So the duplication is made safe instead of hidden. The `light palette parity`
+   gate in tools/audit-site.mjs parses both blocks and fails the build if they
+   disagree on any token. Editing one and not the other is a red build, not a
+   scheme that quietly drifts out of sync. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-paper:        oklch(98.5% 0.004 305);
+  --color-paper-raised: oklch(96% 0.006 305);
+  --color-paper-card:   oklch(100% 0 0);
+  --color-paper-sunk:   oklch(93.5% 0.008 305);
+  --color-ink:       oklch(19% 0.020 305);
+  --color-ink-muted: oklch(37% 0.020 305);
+  --color-ink-soft:  oklch(45% 0.020 305);
+  --color-ink-faint: oklch(52% 0.020 305);
+  --color-rule:        oklch(86% 0.008 305);
+  --color-rule-strong: oklch(76% 0.014 305);
+  --color-accent:      oklch(56% 0.205 8);
+  --color-accent-lit:  oklch(50% 0.190 14);
+  --color-accent-ink:  oklch(99% 0 0);
+  --color-accent-text: oklch(48% 0.190 10);
+  --color-violet:      oklch(46% 0.185 295);
+  --color-ember:       oklch(44% 0.140 45);
+  --color-focus:       oklch(50% 0.185 14);
+  --color-accent-wash:         oklch(56% 0.205 8 / 0.10);
+  --color-accent-edge:         oklch(56% 0.205 8 / 0.16);
+  --color-accent-border:       oklch(56% 0.205 8 / 0.38);
+  --color-accent-border-strong:oklch(56% 0.205 8 / 0.48);
+  --color-accent-hairline:     oklch(56% 0.205 8 / 0.55);
+  --color-violet-wash:         oklch(46% 0.185 295 / 0.12);
+  --color-violet-border:       oklch(46% 0.185 295 / 0.36);
+  --shadow-seam:    0 1px 2px -1px oklch(20% 0.020 305 / 0.14);
+  --shadow-raised:  0 2px 6px -3px oklch(20% 0.020 305 / 0.16), 0 16px 32px -20px oklch(20% 0.020 305 / 0.18);
+  --shadow-float:   0 4px 10px -6px oklch(20% 0.020 305 / 0.14), 0 28px 56px -28px oklch(20% 0.020 305 / 0.20);
+  --shadow-accent:  0 10px 26px -12px oklch(56% 0.205 8 / 0.34);
+  --shadow-accent-lit: 0 14px 34px -12px oklch(56% 0.205 8 / 0.40);
+  --light-catch: inset 0 1px 0 oklch(30% 0.030 305 / 0.06);
+  --scrollbar-track: oklch(95% 0.006 305);
+  --scrollbar-thumb: oklch(80% 0.012 305);
+  --scrollbar-thumb-hover: oklch(70% 0.018 305);
+  --caret: var(--color-accent);
+  --color-mask: #fff;
+  --grain-blend: soft-light;
+  --grain-opacity: 0.35;
+  --glow-opacity: 0.5;
+}

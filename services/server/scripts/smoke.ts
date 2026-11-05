@@ -14,6 +14,11 @@ import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { io, type Socket } from 'socket.io-client';
 import pg from 'pg';
+import { runRetentionPurge, resolveRetentionWindows } from '../src/retention.js';
+import { selectQuestions, NO_REPEAT_WINDOW_GAMES } from '../src/question-selector.js';
+import { recentlyPlayedQuestionIds } from '../src/persistence.js';
+import { getQuestions, poolIds } from '@deeper/content';
+import { TOTAL_QUESTIONS } from '@deeper/shared';
 
 const PORT = Number(process.env.SMOKE_PORT ?? 4100);
 const BASE_URL = `http://localhost:${PORT}`;
@@ -707,6 +712,175 @@ async function main(): Promise<void> {
     check('unknown user is acknowledged, not retried', orphan.status === 200);
     check('unknown user is not applied', orphan.body.applied === false);
     check('unknown user is reported', orphan.body.reason === 'unknown-user');
+
+    // ---- Section 12: retention / right to erasure -------------------------
+    // The privacy policy promises a bounded retention period for gameplay
+    // history. This proves the sweep actually does that, and — just as
+    // importantly — that it spares accounts, entitlements and anything young.
+    console.log('\n-- retention purge --');
+    const windows = resolveRetentionWindows();
+    const OLD = '2020-01-01T00:00:00Z';
+    const FRESH = new Date().toISOString();
+    const RETENTION_DEVICE = `smoke-retention-device-${RUN_ID}`;
+
+    await pool.query(
+      `INSERT INTO users (device_id) VALUES ($1) ON CONFLICT (device_id) DO NOTHING`,
+      [RETENTION_DEVICE],
+    );
+    const { rows: retentionUser } = await pool.query(
+      `SELECT id FROM users WHERE device_id = $1`,
+      [RETENTION_DEVICE],
+    );
+    const retentionUserId = String(retentionUser[0]?.id);
+
+    for (const [roomId, roomCode, at] of [
+      ['30000000-0000-0000-0000-000000000001', 'RT01', OLD],
+      ['30000000-0000-0000-0000-000000000002', 'RT02', FRESH],
+    ] as const) {
+      await pool.query(
+        `INSERT INTO rooms (id, room_code, host_user_id, category_id, status, created_at, last_activity_at)
+         VALUES ($1, $2, $3, 'deep', 'complete', $4, $4)
+         ON CONFLICT (id) DO NOTHING`,
+        [roomId, roomCode, retentionUserId, at],
+      );
+      await pool.query(
+        `INSERT INTO games (room_id, host_user_id, category_id, started_at, ended_at, credit_consumption_key)
+         VALUES ($1, $2, 'deep', $3, $3, $4)
+         ON CONFLICT (credit_consumption_key) DO NOTHING`,
+        [roomId, retentionUserId, at, `retention:${roomId}`],
+      );
+      await pool.query(
+        `INSERT INTO reactions (game_id, question_position, user_id, reaction)
+         SELECT id, 1, $2, 'love' FROM games WHERE room_id = $1`,
+        [roomId, retentionUserId],
+      );
+    }
+    await pool.query(
+      `INSERT INTO webhook_events (provider, event_id, event_type, received_at)
+       VALUES ('revenuecat', $1, 'TEST', $2) ON CONFLICT DO NOTHING`,
+      [`smoke-retention-old-${RUN_ID}`, OLD],
+    );
+
+    const dryReport = await runRetentionPurge(pool, windows, true);
+    check('dry run reports the expired rows', dryReport.gamesDeleted >= 1 && dryReport.roomsDeleted >= 1);
+    const survivedDryRun = await pool.query(
+      `SELECT count(*)::int AS n FROM games WHERE room_id = '30000000-0000-0000-0000-000000000001'`,
+    );
+    check('dry run deletes nothing', Number(survivedDryRun.rows[0]?.n) === 1);
+
+    const report = await runRetentionPurge(pool, windows, false);
+    check('expired game is purged', report.gamesDeleted >= 1);
+    check('expired room is purged', report.roomsDeleted >= 1);
+    check('expired webhook record is purged', report.webhookEventsDeleted >= 1);
+
+    const after = await pool.query(
+      `SELECT
+         (SELECT count(*)::int FROM games  WHERE room_id = '30000000-0000-0000-0000-000000000001') AS old_games,
+         (SELECT count(*)::int FROM rooms  WHERE id     = '30000000-0000-0000-0000-000000000001') AS old_rooms,
+         (SELECT count(*)::int FROM reactions r JOIN games g ON g.id = r.game_id
+            WHERE g.room_id = '30000000-0000-0000-0000-000000000001') AS old_reactions,
+         (SELECT count(*)::int FROM games  WHERE room_id = '30000000-0000-0000-0000-000000000002') AS new_games,
+         (SELECT count(*)::int FROM rooms  WHERE id     = '30000000-0000-0000-0000-000000000002') AS new_rooms,
+         (SELECT count(*)::int FROM users  WHERE device_id = $1) AS user_kept,
+         (SELECT count(*)::int FROM webhook_events WHERE event_id = $2) AS old_hook`,
+      [RETENTION_DEVICE, `smoke-retention-old-${RUN_ID}`],
+    );
+    const a = after.rows[0] as Record<string, number>;
+    check('expired game row is gone', a['old_games'] === 0);
+    check('expired room row is gone', a['old_rooms'] === 0);
+    check('reactions cascade with the game', a['old_reactions'] === 0);
+    check('expired webhook record is gone', a['old_hook'] === 0);
+    check('recent game is NOT purged', a['new_games'] === 1);
+    check('recent room is NOT purged', a['new_rooms'] === 1);
+    check('the user account itself is never purged', a['user_kept'] === 1);
+
+    // ---- Section 13: question selection and the no-repeat window -----------
+    // The catalogue is 800 questions, but selection used to walk the pool from
+    // index 0, so every game of a deck played the identical ten and 720
+    // questions were unreachable. This proves the draw is now random AND that it
+    // avoids what the last games of that deck already used.
+    console.log('\n-- question selection --');
+    const deck: 'deep' = 'deep';
+    const deckPool = poolIds(deck);
+    const recentIds = deckPool.slice(0, TOTAL_QUESTIONS);
+
+    const seededRoomId = '40000000-0000-0000-0000-000000000001';
+    const seededGameId = '40000000-0000-0000-0000-000000000002';
+    await pool.query(
+      `INSERT INTO rooms (id, room_code, host_user_id, category_id, status, created_at, last_activity_at)
+       VALUES ($1, 'Q01', $2, $3, 'complete', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [seededRoomId, retentionUserId, deck],
+    );
+    await pool.query(
+      `INSERT INTO games (id, room_id, host_user_id, category_id, started_at, ended_at, credit_consumption_key)
+       VALUES ($1, $2, $3, $4, now(), now(), $5)
+       ON CONFLICT (credit_consumption_key) DO NOTHING`,
+      [seededGameId, seededRoomId, retentionUserId, deck, `selection:${RUN_ID}`],
+    );
+    for (const [index, questionId] of recentIds.entries()) {
+      await pool.query(
+        `INSERT INTO game_questions (game_id, question_id, position) VALUES ($1, $2, $3)
+         ON CONFLICT DO NOTHING`,
+        [seededGameId, questionId, index + 1],
+      );
+    }
+
+    const fresh = await selectQuestions(deck);
+    const freshIds = fresh.map((q) => q.id);
+
+    // The window is 10 games of 10 questions against a pool of 100, so once a
+    // deck has history the window can cover the entire pool and a full game
+    // necessarily overlaps. The contract is therefore not "never repeats" but
+    // "takes every fresh question that exists before topping up", which holds
+    // however much history has built up.
+    // The window is 10 games of 10 questions against a pool of 100, so once a
+    // deck has history the window can cover the entire pool and a full game
+    // necessarily overlaps. The contract is therefore not "never repeats" but
+    // "takes every fresh question that exists before topping up", which holds
+    // however much history has built up.
+    //
+    // The window is the union across the last NO_REPEAT_WINDOW_GAMES games,
+    // not just the game seeded above: earlier smoke sections record their own.
+    const window = new Set(await recentlyPlayedQuestionIds(deck, NO_REPEAT_WINDOW_GAMES));
+    const available = Math.max(0, Math.min(TOTAL_QUESTIONS, deckPool.length - window.size));
+    const drawnFresh = freshIds.filter((id) => !window.has(id)).length;
+
+    check('a selected game is full length', fresh.length === TOTAL_QUESTIONS);
+    check('a selected game has no duplicates', new Set(freshIds).size === freshIds.length);
+    check(
+      'every question outside the window is used before any inside it',
+      drawnFresh === available,
+      `${drawnFresh} fresh of ${available} available`,
+    );
+    check(
+      'selection is no longer the deterministic head of the pool',
+      JSON.stringify(freshIds) !== JSON.stringify(deckPool.slice(0, TOTAL_QUESTIONS)),
+    );
+    check('a selected game is drawn only from its own deck', fresh.every((q) => q.categoryId === deck));
+
+    // Two independent draws must differ. A fixed seed would hide a regression,
+    // so this uses the real Math.random path.
+    const again = await selectQuestions(deck);
+    check('consecutive draws differ', JSON.stringify(again.map((q) => q.id)) !== JSON.stringify(freshIds));
+
+    // Reachability: the old implementation could only ever produce the first
+    // ten. 200 independent draws of 10 from 100 covers the pool with a
+    // probability of about 1 - 7e-10, so this does not flake in CI. (60 draws
+    // was the first attempt and it failed roughly one run in ten.)
+    const reachable = new Set<string>();
+    for (let i = 0; i < 200; i += 1) {
+      for (const q of getQuestions(deck, TOTAL_QUESTIONS)) reachable.add(q.id);
+    }
+    check('the whole deck is reachable', reachable.size === deckPool.length, `${reachable.size}/${deckPool.length}`);
+
+    await pool.query(`DELETE FROM games WHERE id = $1`, [seededGameId]);
+    await pool.query(`DELETE FROM rooms WHERE id = $1`, [seededRoomId]);
+
+    // The fresh room/game left behind would not match the smoke-% cleanup, so
+    // remove it here in FK-safe order.
+    await pool.query(`DELETE FROM games WHERE room_id IN ('30000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000002')`);
+    await pool.query(`DELETE FROM rooms WHERE id IN ('30000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000002')`);
   } finally {
     host?.disconnect();
     guest?.disconnect();

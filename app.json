@@ -6,23 +6,41 @@
     "orientation": "portrait",
     "scheme": "deeper",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "plugins": ["expo-router"],
+    "icon": "./assets/icon.png",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#0D0D12"
+        }
+      ],
+      "expo-status-bar"
+    ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.deeper.mobile",
-      "infoPlist": {
-        "NSUserTrackingUsageDescription": "DEEPER uses this permission to keep ads relevant and support the free experience."
-      }
+      "bundleIdentifier": "app.deeper.mobile"
     },
     "android": {
       "package": "app.deeper.mobile",
-      "adaptiveIcon": { "backgroundColor": "#0D0D12" }
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0D0D12"
+      }
     },
-    "experiments": { "typedRoutes": true },
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
-      "router": { "origin": false },
-      "eas": { "projectId": "REPLACE_WITH_EAS_PROJECT_ID" }
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
     }
   }
 }

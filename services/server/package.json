@@ -8,6 +8,7 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
+    "retention": "tsx src/retention.ts --purge",
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {

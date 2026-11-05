@@ -1,0 +1,39 @@
+[
+  {
+    "date": "2026-09-26",
+    "run": 1,
+    "macrostructure": "Narrative Workflow",
+    "genre": "editorial",
+    "theme": "custom",
+    "theme_axes": "dark / grotesk-sans / hot pink",
+    "vibe": "austere, near-black, hairline rules",
+    "enrichment": "none (typography only)",
+    "nav": "N9 Edge-aligned minimal",
+    "footer": "Ft1 Mast-headed",
+    "brief": "DEEPER: pre-launch marketing site for a real-time multiplayer conversation game",
+    "outcome": "rejected by the user. Read as print rather than as the product: 2px corners, hairline rules, a single accent rationed to one button, and a page too sparse to carry a product with no social proof. Nothing wrong with the rules, wrong brief answered."
+  },
+  {
+    "date": "2026-09-26",
+    "run": 2,
+    "macrostructure": "Narrative Workflow + Catalogue",
+    "genre": "editorial",
+    "theme": "custom (rebuilt)",
+    "theme_axes": "dark / grotesk-sans / warm, glow-lit, generous radii",
+    "vibe": "the lamp is on, two people at a table at 1am",
+    "enrichment": "E1 real texture assets (grain + three glow PNGs) + E2 illustrated game states drawn from the shipping app's own strings",
+    "nav": "N9 Edge-aligned minimal, plus a native disclosure on small screens",
+    "footer": "Ft1 Mast-headed",
+    "brief": "same brief, plus: more pages, how-to-play content, pictures where they help",
+    "outcome": "shipped. Radii matched to the app's own scale (8/14/20/28), the accent kept to one hue with violet confined to gradients and glows, gradient text removed from the hero after the first draft reintroduced it, and the closing panel de-centred because a centred box of stacked buttons is the shape every generated landing page converges on."
+  },
+  {
+    "date": "2026-09-26",
+    "run": 3,
+    "macrostructure": "n/a — copy corrections, no layout change",
+    "genre": "editorial",
+    "theme": "unchanged",
+    "brief": "site copy audit after two false claims were found",
+    "outcome": "Removed three invented capability claims: guests playing in a browser, installing nothing to join, and questions being drawn at random. Added an audit gate coupled to app.json so the web-client claim cannot come back without a web target. Also removed three randomness claims after finding getQuestions was deterministic. The honesty gate looked for invented metrics and could not see an invented capability; that is why the new gate is coupled to the build config instead of to a phrase list."
+  }
+]

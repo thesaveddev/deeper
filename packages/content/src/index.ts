@@ -137,9 +137,62 @@ export const questions: Question[] = categories.flatMap((category) =>
   })))
 );
 
-export function getQuestions(categoryId: CategoryId, count = 10): Question[] {
+/** Injected so selection is testable without stubbing Math.random. */
+export type Rng = () => number;
+
+export interface SelectOptions {
+  /**
+   * Question ids to avoid if at all possible. Used to keep a deck off the
+   * questions the last few games already used.
+   */
+  exclude?: ReadonlySet<string> | undefined;
+  /** Defaults to Math.random. */
+  rng?: Rng | undefined;
+}
+
+/** Fisher-Yates, in place. Unbiased, and it does not require a unique pool. */
+function shuffle<T>(items: T[], rng: Rng): T[] {
+  for (let i = items.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    const a = items[i]!;
+    const b = items[j]!;
+    items[i] = b;
+    items[j] = a;
+  }
+  return items;
+}
+
+/**
+ * Pick `count` questions for a deck, at random.
+ *
+ * This used to walk the pool from index 0, which meant every game of a deck
+ * played the identical ten questions: the first two base prompts, each with all
+ * five of their variant suffixes. Only 10% of the catalogue could ever appear,
+ * and the "800 questions" figure was true of the seed data and false of the
+ * game. Selection is now a shuffled draw.
+ *
+ * `exclude` is honoured first. If excluding leaves fewer than `count`, the
+ * shortfall is topped up from the excluded set rather than returning a short
+ * game, so the caller can pass the entire recent history without risking a
+ * five-question game.
+ */
+export function getQuestions(categoryId: CategoryId, count = 10, options: SelectOptions = {}): Question[] {
+  const rng = options.rng ?? Math.random;
   const pool = questions.filter((question) => question.categoryId === categoryId && question.isActive);
-  return Array.from({ length: Math.min(count, pool.length) }, (_, index) => pool[index % pool.length]!);
+  const excluded = new Set(options.exclude ?? []);
+  const fresh = pool.filter((question) => !excluded.has(question.id));
+  const stale = pool.filter((question) => excluded.has(question.id));
+
+  const picked = shuffle(fresh, rng).slice(0, count);
+  if (picked.length < count) {
+    picked.push(...shuffle(stale, rng).slice(0, count - picked.length));
+  }
+  return picked;
+}
+
+/** Every question id in a deck, for callers that need the full pool. */
+export function poolIds(categoryId: CategoryId): string[] {
+  return questions.filter((q) => q.categoryId === categoryId && q.isActive).map((q) => q.id);
 }
 
 export function getCategory(categoryId: CategoryId): Category {

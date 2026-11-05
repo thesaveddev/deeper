@@ -5,10 +5,12 @@ import cors from 'cors';
 import { Server } from 'socket.io';
 import { z } from 'zod';
 import { GameRoom, type RoomPlayer } from './game-room.js';
+import { selectQuestions } from './question-selector.js';
 import type { CategoryId, ReactionType } from '@deeper/shared';
 import { getCategory } from '@deeper/content';
 import { initDb, logFailure } from './db.js';
 import { initLiveStore } from './live-store.js';
+import { startRetentionJob } from './retention.js';
 import { RoomRegistry } from './room-registry.js';
 import {
   applyEntitlement,
@@ -16,7 +18,7 @@ import {
   recordWebhookEvent,
 } from './persistence.js';
 import {
-  REVENUECAT_ENTITLEMENT,
+  entitlementKeyFor,
   candidateUserKeys,
   concernsOurEntitlement,
   effectForEvent,
@@ -112,7 +114,9 @@ app.post('/webhooks/revenuecat', express.raw({ type: '*/*', limit: '1mb' }), asy
     await applyEntitlement({
       userId,
       provider: 'revenuecat',
-      entitlementKey: REVENUECAT_ENTITLEMENT,
+      // Which entitlement this event is about, not a hardcoded one: a revoke for a
+      // second product must not be written against deeper_plus.
+      entitlementKey: entitlementKeyFor(event),
       active: effect === 'grant',
       expiresAt: event.expiration_at_ms ? new Date(event.expiration_at_ms) : null,
       productId: event.product_id,
@@ -188,7 +192,7 @@ function registerPlayer(playerId: string, displayName: string, account: StoredUs
 }
 
 io.on('connection', (socket) => {
-  socket.on('room:create', async (input, callback) => { try { const parsed = z.object({ categoryId: categorySchema, maxPlayers: z.number().int().min(2).max(8).optional(), displayName: nameSchema.optional(), ageConfirmed: z.boolean().optional(), deviceKey: deviceKeySchema.optional() }).parse(input); if (parsed.categoryId === 'after-dark' && !parsed.ageConfirmed) throw new Error('AGE_CONFIRMATION_REQUIRED'); const category = getCategory(parsed.categoryId as CategoryId); const maxPlayers = Math.min(parsed.maxPlayers ?? category.maxPlayers, category.maxPlayers); const playerId = randomUUID(); const displayName = parsed.displayName ?? `Player ${playerId.slice(0, 4)}`; const account = await resolveAccount(parsed.deviceKey, playerId, displayName); const identity = registerPlayer(playerId, displayName, account); if (premiumEnforced && category.isPremium && !identity.premium) throw new Error('PREMIUM_REQUIRED'); const host: RoomPlayer = { playerId, displayName, sessionId: socket.id, isHost: true, connected: true, joinedAt: new Date().toISOString(), socketId: socket.id }; const room = registry.create(parsed.categoryId as CategoryId, host, maxPlayers); sockets.set(socket.id, { roomId: room.state.roomId, playerId }); socket.join(room.state.roomId); void recordRoomCreated({ roomId: room.state.roomId, roomCode: room.state.roomCode, hostUserId: identity.userId, categoryId: room.state.categoryId }); void recordPlayerJoined({ roomId: room.state.roomId, userId: identity.userId, displayName }); ack(callback, { ok: true, data: room.snapshot(), you: playerId }); } catch (error) { ack(callback, { ok: false, error: errorFor(error) }); } });
+  socket.on('room:create', async (input, callback) => { try { const parsed = z.object({ categoryId: categorySchema, maxPlayers: z.number().int().min(2).max(8).optional(), displayName: nameSchema.optional(), ageConfirmed: z.boolean().optional(), deviceKey: deviceKeySchema.optional() }).parse(input); if (parsed.categoryId === 'after-dark' && !parsed.ageConfirmed) throw new Error('AGE_CONFIRMATION_REQUIRED'); const category = getCategory(parsed.categoryId as CategoryId); const maxPlayers = Math.min(parsed.maxPlayers ?? category.maxPlayers, category.maxPlayers); const playerId = randomUUID(); const displayName = parsed.displayName ?? `Player ${playerId.slice(0, 4)}`; const account = await resolveAccount(parsed.deviceKey, playerId, displayName); const identity = registerPlayer(playerId, displayName, account); if (premiumEnforced && category.isPremium && !identity.premium) throw new Error('PREMIUM_REQUIRED'); const host: RoomPlayer = { playerId, displayName, sessionId: socket.id, isHost: true, connected: true, joinedAt: new Date().toISOString(), socketId: socket.id }; const room = registry.create(parsed.categoryId as CategoryId, host, maxPlayers, await selectQuestions(parsed.categoryId as CategoryId)); sockets.set(socket.id, { roomId: room.state.roomId, playerId }); socket.join(room.state.roomId); void recordRoomCreated({ roomId: room.state.roomId, roomCode: room.state.roomCode, hostUserId: identity.userId, categoryId: room.state.categoryId }); void recordPlayerJoined({ roomId: room.state.roomId, userId: identity.userId, displayName }); ack(callback, { ok: true, data: room.snapshot(), you: playerId }); } catch (error) { ack(callback, { ok: false, error: errorFor(error) }); } });
   socket.on('room:join', async (input, callback) => { try { const parsed = z.object({ roomCode: z.string().trim().toUpperCase().length(4), displayName: nameSchema.optional(), deviceKey: deviceKeySchema.optional() }).parse(input); const room = await registry.getByCode(parsed.roomCode); if (!room) throw new Error('ROOM_NOT_FOUND'); const playerId = randomUUID(); const displayName = parsed.displayName ?? `Player ${playerId.slice(0, 4)}`; const account = await resolveAccount(parsed.deviceKey, playerId, displayName); const identity = registerPlayer(playerId, displayName, account); const player: RoomPlayer = { playerId, displayName, sessionId: socket.id, isHost: false, connected: true, joinedAt: new Date().toISOString(), socketId: socket.id }; room.addPlayer(player); sockets.set(socket.id, { roomId: room.state.roomId, playerId }); socket.join(room.state.roomId); void recordPlayerJoined({ roomId: room.state.roomId, userId: identity.userId, displayName }); sendSnapshot(room); ack(callback, { ok: true, data: room.snapshot(), you: playerId }); } catch (error) { ack(callback, { ok: false, error: errorFor(error) }); } });
   socket.on('session:resume', async (input, callback) => { try { const parsed = z.object({ roomId: z.string().trim().min(1).max(64), playerId: z.string().trim().min(1).max(64), sessionId: z.string().trim().max(64).optional(), deviceKey: deviceKeySchema.optional() }).parse(input); const room = await registry.get(parsed.roomId); if (!room) throw new Error('ROOM_EXPIRED'); const player = room.state.players.get(parsed.playerId); if (!player) throw new Error('RESUME_NOT_FOUND'); if (!players.has(parsed.playerId)) registerPlayer(parsed.playerId, player.displayName, await resolveAccount(parsed.deviceKey, parsed.playerId, player.displayName)); room.setConnection(parsed.playerId, true, socket.id); sockets.set(socket.id, { roomId: room.state.roomId, playerId: parsed.playerId }); socket.join(room.state.roomId); sendSnapshot(room); ack(callback, { ok: true, data: room.snapshot(), you: parsed.playerId }); } catch (error) { ack(callback, { ok: false, error: errorFor(error) }); } });
   socket.on('room:leave', async (callback) => { try { const value = sockets.get(socket.id); if (!value) throw new Error('NOT_IN_ROOM'); const room = await registry.get(value.roomId); const identity = players.get(value.playerId); if (room) { room.removePlayer(value.playerId); void recordPlayerLeft(room.state.roomId, identity?.userId); sendSnapshot(room); } sockets.delete(socket.id); ack(callback, { ok: true, data: undefined }); } catch (error) { ack(callback, { ok: false, error: errorFor(error) }); } });
@@ -227,6 +231,11 @@ const port =
   Number.isInteger(rawPort) && rawPort > 0 && rawPort < 65_536 ? rawPort : 4400;
 // Initialise the database BEFORE accepting connections so the first game of
 // the day never races the catalog sync (falls back to in-memory if offline).
-void Promise.all([initDb(), initLiveStore()]).finally(() => {
-  httpServer.listen(port, () => console.log(`DEEPER server listening on :${port}`));
-});
+void Promise.all([initDb(), initLiveStore()])
+  .then(([dbReady]) => {
+    // Only meaningful with a database; without one there is no history to purge.
+    if (dbReady) startRetentionJob();
+  })
+  .finally(() => {
+    httpServer.listen(port, () => console.log(`DEEPER server listening on :${port}`));
+  });

@@ -38,7 +38,20 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 
-export const REVENUECAT_ENTITLEMENT = 'deeper_plus';
+/**
+ * Entitlement keys that grant premium access.
+ *
+ * A list, not a single constant, so a second paid product is an addition here
+ * rather than a change to every comparison below. A grant for any of these
+ * means the user holds premium; a revoke only clears the flag when the user
+ * holds none of them, which is why `applyEntitlement` in persistence.ts
+ * re-derives the flag across the whole list instead of trusting the key that
+ * arrived with the event.
+ */
+export const REVENUECAT_ENTITLEMENTS: readonly string[] = ['deeper_plus'];
+
+/** Kept for the callers that only ever deal with the one live product. */
+export const REVENUECAT_ENTITLEMENT = REVENUECAT_ENTITLEMENTS[0]!;
 const SIGNATURE_HEADER = 'x-revenuecat-webhook-signature';
 /** Reject anything outside a few minutes of now to blunt replay attacks. */
 const DEFAULT_TOLERANCE_SECONDS = 300;
@@ -114,15 +127,33 @@ export function candidateUserKeys(event: RevenueCatEvent): string[] {
   return [...new Set(keys.filter((key): key is string => typeof key === 'string' && key.length > 0))];
 }
 
-/** Does this event concern our entitlement at all? */
+/** Does this event concern one of our entitlements at all? */
 export function concernsOurEntitlement(event: RevenueCatEvent): boolean {
   if (event.entitlement_ids?.length) {
-    return event.entitlement_ids.includes(REVENUECAT_ENTITLEMENT);
+    return event.entitlement_ids.some((id) => REVENUECAT_ENTITLEMENTS.includes(id));
   }
   // Fall back to the deprecated singular field, then to "assume yes" for a
   // grant: a product we have never mapped should not silently deny access.
-  if (event.entitlement_id) return event.entitlement_id === REVENUECAT_ENTITLEMENT;
+  if (event.entitlement_id) return REVENUECAT_ENTITLEMENTS.includes(event.entitlement_id);
   return effectForEvent(event.type) !== 'keep';
+}
+
+/**
+ * The entitlement this event is actually about.
+ *
+ * With more than one product, a revoke for `adult_pack` must not be recorded
+ * against `deeper_plus`, or the two would overwrite each other in the
+ * entitlements table's uniqueness key. Prefers the event's own list, falls back
+ * to the singular field, and finally to the primary entitlement for a grant we
+ * have never mapped.
+ */
+export function entitlementKeyFor(event: RevenueCatEvent): string {
+  const known = event.entitlement_ids?.find((id) => REVENUECAT_ENTITLEMENTS.includes(id));
+  if (known) return known;
+  if (event.entitlement_id && REVENUECAT_ENTITLEMENTS.includes(event.entitlement_id)) {
+    return event.entitlement_id;
+  }
+  return REVENUECAT_ENTITLEMENT;
 }
 
 /* ------------------------------------------------------------------ *

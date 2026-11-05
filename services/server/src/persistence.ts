@@ -11,6 +11,21 @@
 import type { CategoryId, ReactionType, RoomStatus } from '@deeper/shared';
 import { isDbReady, logFailure, pool } from './db.js';
 
+/**
+ * Entitlement keys that grant premium access.
+ *
+ * A single list rather than one hardcoded constant, so adding a second paid
+ * product is a one-line change here rather than a hunt through the webhook. A
+ * user holds premium if ANY key in this list is active for them, which is what
+ * stops one purchase from revoking another.
+ */
+export const PREMIUM_ENTITLEMENTS: readonly string[] = ['deeper_plus'];
+
+/** The slice of a pg client that the entitlement writes need. */
+export interface EntitlementClient {
+  query(text: string, values?: unknown[]): Promise<{ rows: unknown[] }>;
+}
+
 export interface StoredUser {
   userId: string;
   freeGames: number;
@@ -291,7 +306,7 @@ export async function findUserByDeviceKeys(keys: string[]): Promise<string | nul
  * `entitlements` row and the denormalised `users.premium_entitlement` flag can
  * never disagree — a guest reading a stale flag would hit a locked deck.
  */
-export async function applyEntitlement(params: {
+export interface EntitlementParams {
   userId: string;
   provider: string;
   entitlementKey: string;
@@ -300,11 +315,17 @@ export async function applyEntitlement(params: {
   productId?: string | undefined;
   transactionId?: string | undefined;
   purchasedAt?: Date | undefined;
-}): Promise<void> {
-  if (!isDbReady()) throw new Error('DB_UNAVAILABLE');
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+}
+
+/**
+ * Entitlement writes, behind a client seam so the SQL can be tested without a
+ * database. The premium recomputation is the part worth testing: it is the
+ * difference between "this user holds anything paid" and "this user holds the
+ * thing that just arrived", and getting it wrong silently revokes a
+ * subscription somebody has already paid for.
+ */
+export async function applyEntitlementWith(client: EntitlementClient, params: EntitlementParams): Promise<void> {
+  await client.query('BEGIN');
     await client.query(
       `INSERT INTO entitlements (user_id, provider, entitlement_key, active, expires_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, now())
@@ -335,13 +356,29 @@ export async function applyEntitlement(params: {
       `UPDATE users
           SET premium_entitlement = EXISTS (
                 SELECT 1 FROM entitlements e
-                 WHERE e.user_id = $1 AND e.active = true AND e.entitlement_key = $2
+                 WHERE e.user_id = $1
+                   AND e.active = true
+                   AND e.entitlement_key = ANY($2::text[])
               ),
               updated_at = now()
         WHERE id = $1`,
-      [params.userId, params.entitlementKey],
+      // Any active premium entitlement, not the one that just arrived. The
+      // previous version compared against $2 = the incoming key, so a user who
+      // held deeper_plus and then bought a second product had their premium flag
+      // recomputed from that second product alone, silently revoking the
+      // subscription they had already paid for. The flag means "holds anything
+      // paid", so revoking one of several entitlements must not clear it.
+      [params.userId, PREMIUM_ENTITLEMENTS],
     );
     await client.query('COMMIT');
+}
+
+/** Pool-backed entry point. Throws when the database is not ready. */
+export async function applyEntitlement(params: EntitlementParams): Promise<void> {
+  if (!isDbReady()) throw new Error('DB_UNAVAILABLE');
+  const client = await pool.connect();
+  try {
+    await applyEntitlementWith(client, params);
   } catch (error) {
     await client.query('ROLLBACK').catch(() => undefined);
     throw error;
@@ -350,9 +387,34 @@ export async function applyEntitlement(params: {
   }
 }
 
+/**
+ * Question ids used by the most recent `games` games of a deck.
+ *
+ * Read from games + game_questions, which already record what was played. Used
+ * by the no-repeat window so a deck does not serve the same ten questions twice
+ * in a row. Returns an empty set when the database is unavailable, which the
+ * caller treats as "draw without exclusions".
+ */
+export async function recentlyPlayedQuestionIds(categoryId: CategoryId, games: number): Promise<string[]> {
+  if (!isDbReady()) return [];
+  const result = await pool.query(
+    `SELECT DISTINCT gq.question_id
+       FROM game_questions gq
+       JOIN games g ON g.id = gq.game_id
+      WHERE g.category_id = $1
+        AND g.id IN (
+          SELECT id FROM games
+           WHERE category_id = $1
+           ORDER BY started_at DESC NULLS LAST, id DESC
+           LIMIT $2
+        )`,
+    [categoryId, games],
+  );
+  return result.rows.map((row) => String((row as { question_id: string }).question_id));
+}
+
 /** Called when the room-expiry sweep removes a room from memory. */
-export async function recordRoomExpired(roomId: string): Promise<void> {
-  if (!isDbReady()) return;
+export async function recordRoomExpired(roomId: string): Promise<void> {  if (!isDbReady()) return;
   try {
     await recordGameFinished(roomId, 'expired');
     await pool.query('UPDATE rooms SET status = $2 WHERE id = $1', [roomId, 'expired']);
