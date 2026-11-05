@@ -279,13 +279,29 @@ async function launch() {
       '--disable-extensions',
       '--disable-background-networking',
       '--disable-sync',
+      // CI runners (GitHub Actions, containers) have no usable Chrome sandbox
+      // and a tiny /dev/shm. Without these, Chrome dies during startup and the
+      // debugging port never opens. Both are harmless on a desktop.
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
       'about:blank',
     ],
-    { stdio: 'ignore' },
+    { stdio: ['ignore', 'ignore', 'pipe'] },
   );
+
+  // Keep the last few lines of Chrome's stderr. Without this, a startup crash
+  // on CI is reported as "never exposed a debugging endpoint" with no clue as
+  // to whether it was the sandbox, a missing library or a busy port.
+  let chromeStderr = '';
+  proc.stderr?.setEncoding('utf8');
+  proc.stderr?.on('data', (chunk) => {
+    chromeStderr = (chromeStderr + chunk).slice(-8000);
+  });
 
   let info = null;
   for (let i = 0; i < 40; i += 1) {
+    if (proc.exitCode !== null || proc.signalCode) break;
     await sleep(250);
     try {
       const res = await fetch(`http://127.0.0.1:${port}/json/version`);
@@ -295,7 +311,12 @@ async function launch() {
   if (!info) {
     proc.kill();
     fs.rmSync(profile, { recursive: true, force: true });
-    throw new Error('Chrome started but never exposed a debugging endpoint');
+    const reason = chromeStderr.trim().split('\n').slice(-6).join(' | ');
+    throw new Error(
+      `Chrome started but never exposed a debugging endpoint ` +
+      `(exit ${proc.exitCode ?? 'unknown'}, signal ${proc.signalCode ?? 'none'})` +
+      (reason ? `: ${reason}` : ' (no stderr captured)'),
+    );
   }
 
   const cdp = new CdpSocket(info.webSocketDebuggerUrl);
