@@ -23,7 +23,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_SOCKET_URL": "https://api.example.invalid"
+        "EXPO_PUBLIC_SOCKET_URL": "https://your-deployment-host:4400"
       }
     },
     "production": {

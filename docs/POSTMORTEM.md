@@ -14,7 +14,7 @@ Postgres.
 
 The engineering was finished. Typecheck clean, 70 unit tests, a two-client
 Socket.IO smoke test that plays a full round and asserts answer privacy, a
-45-gate static-site audit, and three CI jobs including Android/iOS bundle
+46-gate static-site audit, and three CI jobs including Android/iOS bundle
 export. The last CI run was green.
 
 What was never done: an EAS project ID, a submitted store build, a publicly
@@ -72,7 +72,7 @@ learn whether anyone comes back. The promise should have been about answer
 content, not about counting sessions.
 
 **Effort was misallocated.** Generated OG images, a design-iteration log, a
-headless-Chrome rendering pipeline, a hand-rolled PNG encoder and 45
+headless-Chrome rendering pipeline, a hand-rolled PNG encoder and 46
 static audit gates were built for a marketing site with zero visitors. All of
 it is good craft. None of it produced information about demand.
 

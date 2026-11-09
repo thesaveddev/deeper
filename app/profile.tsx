@@ -38,7 +38,7 @@ export default function ProfileScreen() {
         Alert.alert('Privacy', 'DEEPER answers are private until reveal and discarded after the game ends.', [{ text: 'OK' }]);
         break;
       case 'terms':
-        Alert.alert('Terms', 'Terms of service will be available at example.invalid/terms.', [{ text: 'OK' }]);
+        Alert.alert('Terms', 'This is source code, not a hosted service. There are no terms of service; the repository is published under the MIT License.', [{ text: 'OK' }]);
         break;
       case 'delete':
         Alert.alert(

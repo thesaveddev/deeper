@@ -17,7 +17,13 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 /** The repository the site now points at. Declared once, used by several gates. */
 const REPO = 'https://github.com/thesaveddev/deeper';
-const ORIGIN = 'https://example.invalid';
+/**
+ * Deployment origin, read from the same variable as tools/build-seo.mjs. The
+ * committed build is origin-free: no domain is owned, hosted or claimed. Gates
+ * below validate absolute URLs only in deploy mode and forbid them otherwise,
+ * so a stale canonical cannot quietly reintroduce a dead domain.
+ */
+const SITE_ORIGIN = (process.env.SITE_ORIGIN || '').replace(/\/+$/, '');
 
 const css = read('site/styles.css');
 const tokens = read('site/tokens.css');
@@ -401,44 +407,66 @@ const sitemap = read('site/sitemap.xml');
 const robots = read('site/robots.txt');
 const allFiles = [...PAGES, ...GENERATED].map((n) => `${n}.html`);
 
-// Every page in the site is in the sitemap, and the sitemap names nothing that
-// does not exist. Both directions, because a sitemap that quietly falls behind
-// is how pages stop being found.
+// Two modes, chosen by the same SITE_ORIGIN variable the writer used. In deploy
+// mode the sitemap must cover every page with absolute URLs. In the committed
+// origin-free build it must be an EMPTY urlset: a <loc> without a real origin
+// would be a claim about a site that does not exist.
 const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-const locPaths = locs.map((u) => u.replace(ORIGIN, '') || '/');
+const locPaths = locs.map((u) => u.replace(SITE_ORIGIN, '') || '/');
 const missingFromSitemap = allFiles.filter((f) => {
   const p = f === 'index.html' ? '/' : `/${f}`;
   return !locPaths.includes(p);
 });
 const phantomInSitemap = locPaths.filter((p) => p !== '/' && !allFiles.includes(p.replace(/^\//, '')));
-check('sitemap covers every page', missingFromSitemap.length === 0 && phantomInSitemap.length === 0,
-  missingFromSitemap.length || phantomInSitemap.length
-    ? `missing: ${missingFromSitemap.join(', ') || 'none'}; phantom: ${phantomInSitemap.join(', ') || 'none'}`
-    : `${locs.length} URL(s), all resolve to a real page, no page left out`);
+const sitemapCovers = SITE_ORIGIN
+  ? missingFromSitemap.length === 0 && phantomInSitemap.length === 0
+  : locs.length === 0 && /no deployment origin/i.test(sitemap);
+check('sitemap covers every page', sitemapCovers,
+  !SITE_ORIGIN
+    ? locs.length === 0 ? 'origin-free build: empty urlset, no invented URLs' : `${locs.length} absolute URL(s) with no deployment origin`
+    : missingFromSitemap.length || phantomInSitemap.length
+      ? `missing: ${missingFromSitemap.join(', ') || 'none'}; phantom: ${phantomInSitemap.join(', ') || 'none'}`
+      : `${locs.length} URL(s), all resolve to a real page, no page left out`);
 
-// Absolute https URLs only. A relative or protocol-less loc is a parse error to
-// a crawler, and it fails silently, which is the worst kind.
-const badLocs = locs.filter((u) => !u.startsWith(ORIGIN + '/'));
+// Absolute https URLs only in deploy mode. A relative or protocol-less loc is
+// a parse error to a crawler, and it fails silently, which is the worst kind.
+const badLocs = locs.filter((u) => !u.startsWith(SITE_ORIGIN + '/'));
 const hasXmlns = /xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9"/.test(sitemap);
-check('sitemap well formed', badLocs.length === 0 && hasXmlns && /<urlset[\s>]/.test(sitemap),
-  badLocs.length ? `not absolute under ${ORIGIN}: ${badLocs.join(', ')}` : hasXmlns ? 'urlset with namespace, every loc absolute' : 'missing sitemap namespace');
+const sitemapWellFormed = hasXmlns && /<urlset[\s>]/.test(sitemap) &&
+  (SITE_ORIGIN ? badLocs.length === 0 : locs.length === 0);
+check('sitemap well formed', sitemapWellFormed,
+  !SITE_ORIGIN
+    ? sitemapWellFormed ? 'valid empty urlset: no absolute URL asserted' : 'origin-free build must emit no <loc>'
+    : badLocs.length ? `not absolute under ${SITE_ORIGIN}: ${badLocs.join(', ')}` : hasXmlns ? 'urlset with namespace, every loc absolute' : 'missing sitemap namespace');
 
-check('robots points at the sitemap', robots.includes(`Sitemap: ${ORIGIN}/sitemap.xml`),
-  robots.includes(`Sitemap: ${ORIGIN}/sitemap.xml`) ? `Sitemap: ${ORIGIN}/sitemap.xml` : 'no Sitemap: line matching the origin');
+const robotsSitemapOk = SITE_ORIGIN
+  ? robots.includes(`Sitemap: ${SITE_ORIGIN}/sitemap.xml`)
+  : !/^Sitemap:/m.test(robots);
+check('robots points at the sitemap', robotsSitemapOk,
+  SITE_ORIGIN
+    ? robotsSitemapOk ? `Sitemap: ${SITE_ORIGIN}/sitemap.xml` : 'no Sitemap: line matching the origin'
+    : robotsSitemapOk ? 'no Sitemap: directive, because no origin is deployed' : 'Sitemap: directive with no deployment origin');
 
-// One canonical per page, pointing at that page, and it must agree with the
-// sitemap. A canonical that disagrees with the sitemap tells a crawler the two
-// sources contradict each other, and it will believe whichever it read first.
+// In deploy mode one canonical per page, pointing at that page and agreeing
+// with the sitemap. A canonical that disagrees with the sitemap tells a crawler
+// the two sources contradict each other, and it will believe whichever it read
+// first. With no origin there must be none at all.
 const canonProblems = [];
 for (const f of allFiles) {
   const src = read(`site/${f}`);
   const canons = [...src.matchAll(/<link rel="canonical" href="([^"]+)"/g)].map((m) => m[1]);
+  if (!SITE_ORIGIN) {
+    if (canons.length !== 0) canonProblems.push(`${f}: ${canons.length} canonical link(s) with no deployment origin`);
+    continue;
+  }
   if (canons.length !== 1) { canonProblems.push(`${f}: ${canons.length} canonical link(s)`); continue; }
   const p = f === 'index.html' ? '/' : `/${f}`;
-  if (canons[0] !== ORIGIN + p) canonProblems.push(`${f}: ${canons[0]}`);
+  if (canons[0] !== SITE_ORIGIN + p) canonProblems.push(`${f}: ${canons[0]}`);
 }
 check('canonical per page', canonProblems.length === 0,
-  canonProblems.length ? canonProblems.join('; ') : `one canonical per page, all agreeing with the sitemap`);
+  canonProblems.length ? canonProblems.join('; ') : SITE_ORIGIN
+    ? 'one canonical per page, all agreeing with the sitemap'
+    : 'no canonical tag on any page: no deployed origin to point one at');
 
 // The JSON-LD has to parse, and it has to describe SOURCE, not a store app.
 // codeRepository and license are required because they are the only honest
@@ -485,20 +513,24 @@ check('no fabricated structured data', ldFabrications.length === 0,
     ? `asserts ${ldFabrications.join(', ')}, but no store listing exists to source them from`
     : 'no offer, price, rating, review or store URL: nothing asserted that the repository cannot back');
 
-// Exactly one og:image per page, and it has to be absolute. Two tags is worse
-// than one: a scraper reads the first og:image it finds, so a hand-written
-// relative ./assets/icon.png sitting above the generated absolute URL wins, and
-// the one that actually resolves is the one that gets ignored. This is the
-// exact bug the generator had to be fixed for, so it is gated.
+// Exactly one og:image per page. Two tags is worse than one: a scraper reads
+// the first og:image it finds, so a hand-written relative ./assets/icon.png
+// sitting above the generated tag wins, and the one that actually resolves is
+// the one that gets ignored. In deploy mode the value must be absolute under
+// SITE_ORIGIN; in the origin-free build it must be page-relative. Either way
+// there is exactly one, and it resolves to a file in this repository.
 const ogProblems = [];
 for (const f of allFiles) {
   const src = read(`site/${f}`);
   const ogs = [...src.matchAll(/<meta property="og:image" content="([^"]+)"/g)].map((m) => m[1]);
   if (ogs.length !== 1) { ogProblems.push(`${f}: ${ogs.length} og:image tag(s)`); continue; }
-  if (!ogs[0].startsWith(ORIGIN + '/')) ogProblems.push(`${f}: ${ogs[0]}`);
+  const scoped = SITE_ORIGIN ? ogs[0].startsWith(SITE_ORIGIN + '/') : ogs[0].startsWith('./');
+  if (!scoped) ogProblems.push(`${f}: ${ogs[0]}`);
 }
-check('og:image absolute and singular', ogProblems.length === 0,
-  ogProblems.length ? ogProblems.join('; ') : `one absolute og:image per page, all under ${ORIGIN}`);
+check('og:image singular and correctly scoped', ogProblems.length === 0,
+  ogProblems.length ? ogProblems.join('; ') : SITE_ORIGIN
+    ? `one absolute og:image per page, all under ${SITE_ORIGIN}`
+    : 'one page-relative og:image per page, no origin asserted');
 
 // 4. Every page can reach the toggle, and the no-flash script is in every head.
 //    A toggle on four of five pages is a support ticket.
@@ -626,6 +658,30 @@ check('no web-client claim', hasWebTarget || webClaims.length === 0,
     : webClaims.length
       ? `claims a browser client, but app.json has no web target: ${webClaims.join(', ')}`
       : 'no claim of playing without the app, and app.json has no web target');
+
+// --- no retired domain -------------------------------------------------------
+// The retired domain was never hosted, is not part of this release, and must
+// not creep back into generated metadata, visible copy or configuration. The
+// pattern is assembled from parts so this file does not itself contain the
+// string it is looking for.
+const retiredDomain = new RegExp(['deeper', 'app'].join('\\.'), 'i');
+const DOMAIN_WATCH = [
+  ...allFiles.map((f) => `site/${f}`),
+  'site/sitemap.xml',
+  'site/robots.txt',
+  'README.md',
+  'CONTRIBUTING.md',
+  'docs/POSTMORTEM.md',
+  'docs/privacy-policy.md',
+  '.env.example',
+  'eas.json',
+  'app/profile.tsx',
+];
+const domainSightings = DOMAIN_WATCH.filter((p) => retiredDomain.test(read(p)));
+check('no retired domain', domainSightings.length === 0,
+  domainSightings.length
+    ? `retired domain still present in: ${domainSightings.join(', ')}`
+    : 'no retired domain in the site, docs or configuration');
 
 let failed = 0;
 for (const r of results) {

@@ -392,7 +392,7 @@ Search plumbing is generated too: `sitemap.xml`, `robots.txt`, the
 
 ```bash
 npm run site:serve   # http://localhost:4173
-npm run site:audit   # 45 static design and truthfulness gates
+npm run site:audit   # 46 static design and truthfulness gates
 npm run site:build   # policy page, then share images, then the SEO files
 npm run site:og      # just the share images
 npm run site:seo     # just the sitemap, robots and head tags
@@ -438,11 +438,19 @@ join from a browser unless `app.json` gains a `web` target. An early draft of
 the copy claimed exactly that and it was false. That guard is coupled to the
 build config rather than to a phrase list, which is the right pattern.
 
-One artefact of the old site remains: canonical and OG URLs still point at
-`https://example.invalid`, a domain that was never hosted. They were left alone
-because changing the origin would invalidate the sitemap, canonicals and share
-image metadata in one sweep. If you deploy the site, set `ORIGIN` in both
-`tools/build-seo.mjs` and `tools/audit-site.mjs`.
+The site has **no deployment origin**. No domain is owned, hosted or claimed,
+so the committed build contains no canonical tags, no `og:url`, no absolute
+share image URLs and no sitemap `<loc>` entries. Share images use page-relative
+paths instead. If you deploy the site, set `SITE_ORIGIN` and rebuild:
+
+```sh
+SITE_ORIGIN=https://your-deployment-host npm run site:build
+```
+
+`tools/build-seo.mjs` and `tools/audit-site.mjs` read the same variable, so the
+writer and the 46-gate audit cannot disagree about which mode the site is in.
+The audit also fails if the retired domain reappears in the shipped files or
+configuration.
 
 ## Question selection
 

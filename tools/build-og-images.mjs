@@ -437,7 +437,7 @@ function cardHtml(card, tokens) {
     <div class="mark">
       <img src="${t.iconDataUrl}" alt="">
       <b>DEEPER</b>
-      <span>example.invalid</span>
+      <span>open source</span>
     </div>
     <div class="body">
       <div class="kicker">${esc(card.kicker)}</div>
