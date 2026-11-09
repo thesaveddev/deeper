@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Questions — DEEPER</title>
-<meta name="description" content="Straight answers about DEEPER: what it costs, who gets charged, what happens to your answers, whether it works without wifi, and what it does with your data.">
+<meta name="description" content="Straight answers about DEEPER: why it was never launched, what the code does, what it stores, and what you can do with the source.">
 <meta name="theme-color" content="#0D0D12">
 <meta property="og:title" content="Questions — DEEPER">
-<meta property="og:description" content="What it costs, what happens to your answers, and what the app does with your data.">
+<meta property="og:description" content="Why it was never launched, what the code stores, and what you can do with the source.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Schibsted+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -21,30 +21,31 @@
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Straight answers: what it costs, and what happens to your answers.">
+<meta property="og:image:alt" content="Straight answers: why it stopped, and what the code does.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Questions — DEEPER">
-<meta name="twitter:description" content="Straight answers about DEEPER: what it costs, who gets charged, what happens to your answers, whether it works without wifi, and what it does with your data.">
+<meta name="twitter:description" content="Straight answers about DEEPER: why it was never launched, what the code does, what it stores, and what you can do with the source.">
 <meta name="twitter:image" content="https://example.invalid/assets/og/faq.png">
-<meta name="twitter:image:alt" content="Straight answers: what it costs, and what happens to your answers.">
+<meta name="twitter:image:alt" content="Straight answers: why it stopped, and what the code does.">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
+  "@type": "SoftwareSourceCode",
   "name": "DEEPER",
   "alternateName": "DEEPER. Better questions. Better conversations.",
   "url": "https://example.invalid/faq.html",
-  "description": "Straight answers about DEEPER: what it costs, who gets charged, what happens to your answers, whether it works without wifi, and what it does with your data.",
-  "applicationCategory": "GameApplication",
-  "operatingSystem": "iOS, Android",
+  "description": "Straight answers about DEEPER: why it was never launched, what the code does, what it stores, and what you can do with the source.",
+  "codeRepository": "https://github.com/thesaveddev/deeper",
+  "license": "https://github.com/thesaveddev/deeper/blob/main/LICENSE",
+  "programmingLanguage": [
+    "TypeScript",
+    "JavaScript"
+  ],
+  "runtimePlatform": "Expo / React Native, Node.js",
   "softwareVersion": "0.1.0",
   "inLanguage": "en",
   "image": "https://example.invalid/assets/og/faq.png",
-  "isAccessibleForFree": true,
-  "offers": {
-    "@type": "Offer",
-    "availability": "https://schema.org/InStock"
-  }
+  "isAccessibleForFree": true
 }
 </script>
 <!-- /seo:head -->
@@ -76,7 +77,7 @@
       <a href="./privacy-policy.html">Privacy</a>
     </div>
     <span class="nav__slot"></span>
-    <a class="btn" href="#get-it">Get the app</a>
+    <a class="btn" href="https://github.com/thesaveddev/deeper">View on GitHub</a>
     <details class="nav__toggle">
       <summary class="btn btn--ghost" aria-label="Open menu">Menu</summary>
       <div class="nav__menu">
@@ -113,37 +114,39 @@
 </header>
 
 <main id="main">
-
   <section class="pagehead">
     <div class="glow glow--violet" aria-hidden="true"></div>
     <div class="shell pagehead__inner">
       <h1>The things people ask, answered without hedging.</h1>
-      <p>If an answer here is uncomfortable, it is still the answer. Nothing below is aspirational: it describes what the app does today, including the parts that are unfinished.</p>
+      <p>Nothing below is aspirational. It describes what the source code does, why the project was never launched, and what you can do with it now that it is open source.</p>
     </div>
   </section>
 
   <section class="section section--tight">
     <div class="shell">
       <div class="head head--label">
-        <h2>Getting started</h2>
+        <h2>Status and basics</h2>
       </div>
       <div class="qa mt-lg">
         <details class="qa__item" open>
-          <summary class="qa__q">Can guests play without installing the app?</summary>
-          <div class="qa__a"><p>No. Everyone who plays installs it, guests included. The invite link is a <code>deeper://join/CODE</code> link, and a custom scheme only resolves on a device where the app is already present, so it saves typing the four character code rather than saving the install. There is no browser version and no web fallback: the join flow runs over a live socket, so a guest has to be running the real app to answer, react and see the reveal.</p><p>This is the single biggest thing missing from the product right now. A web client is the obvious fix, and until it exists the honest answer is that bringing a new person into a room costs them an install.</p></div>
+          <summary class="qa__q">Is there a live version I can play?</summary>
+          <div class="qa__a"><p>No. DEEPER was built to completion and never launched. There is no submitted build, no store listing, no hosted server and no one maintaining it. What exists is the source in the repository, published under MIT. To play it you build the client and run the server yourself.</p><p>The <a href="https://github.com/thesaveddev/deeper/blob/main/docs/POSTMORTEM.md">postmortem</a> and the <a href="https://github.com/thesaveddev/deeper/blob/main/docs/viability-assessment-2026-11-05.md">viability assessment</a> set out why it stopped there.</p></div>
         </details>
         <details class="qa__item">
-          <details class="qa__item">
-          <summary class="qa__q">Do the same ten questions come up every time?</summary>
-          <div class="qa__a"><p>No. Each game draws ten at random from the hundred in that deck, and the draw avoids anything the last ten games of the same deck used, so it takes ten games to come all the way round. Within a game there are never any repeats.</p><p>Worth being precise about how the hundred are built: every deck is twenty base prompts, each written five ways. So a deck has a lot of range, and less variety than the headline number suggests.</p></div>
+          <summary class="qa__q">Can guests play without installing the app?</summary>
+          <div class="qa__a"><p>No. Every player needs the native client, guests included. The invite is a <code>deeper://join/CODE</code> custom-scheme link, which only resolves on a device where the app is already present. It saves typing the four character code, nothing more. There is no web target in <code>app.json</code> and no browser fallback: the join flow runs over a live socket.</p><p>This is the single biggest reason the product was never launched. A browser guest link would have been the cheapest way to test demand, and it was never built.</p></div>
         </details>
-
-        <summary class="qa__q">How many people can play?</summary>
+        <details class="qa__item">
+          <summary class="qa__q">Do the same ten questions come up every time?</summary>
+          <div class="qa__a"><p>No. Each game draws ten at random from the hundred IDs in that deck, and the selector avoids anything the last ten games of the same deck used. Within a game there are never any repeats of an ID.</p><p>Worth being precise: every deck is 20 base prompts, each written five ways with a mechanical suffix. The 100 IDs are not 100 distinct questions, and the same base prompt can recur inside one game. The selector was written as if the pool were 100 deep.</p></div>
+        </details>
+        <details class="qa__item">
+          <summary class="qa__q">How many people can play?</summary>
           <div class="qa__a"><p>Two to eight. Three of the decks are capped at exactly two, because their questions assume there is one other person in the room: Couples, How Well Do You Know Me, and First Date.</p></div>
         </details>
         <details class="qa__item">
           <summary class="qa__q">Do we all have to be on the same wifi?</summary>
-          <div class="qa__a"><p>No. The reveal is synchronised by a server, not by the phones talking to each other, so people in different places can play the same room as long as each phone can reach that server.</p></div>
+          <div class="qa__a"><p>No. The reveal is synchronised by a server, not by the phones talking to each other, so people in different places can share a room as long as each phone can reach that server. You have to run that server yourself.</p></div>
         </details>
         <details class="qa__item">
           <summary class="qa__q">What if somebody's connection drops mid game?</summary>
@@ -160,24 +163,24 @@
   <section class="section section--tight">
     <div class="shell">
       <div class="head head--label">
-        <h2>Cost</h2>
+        <h2>Money</h2>
       </div>
       <div class="qa mt-lg">
         <details class="qa__item">
           <summary class="qa__q">What does it cost?</summary>
-          <div class="qa__a"><p>Hosting is free for the first ten games on every account, which is enough for most couples to find out whether they like it. DEEPER+ is a one-off unlock that removes the limit, opens the three premium decks, and removes the between-games ad break. Prices come from the store, so what you see at the till is the real price in your region.</p></div>
+          <div class="qa__a"><p>Nothing. The source is MIT licensed and nobody is selling anything. There is no price, no checkout and no listing to buy it from. If you self-host, you pay for your own Postgres, Redis and hosting.</p></div>
+        </details>
+        <details class="qa__item">
+          <summary class="qa__q">Why is there a ten-game allowance in the code?</summary>
+          <div class="qa__a"><p>It was designed as a delayed freemium gate: the host spends one of ten credits per room, and a premium entitlement would remove the limit and unlock three decks. No products, API keys or webhook secrets were ever configured, so the purchase path is inert reference code.</p><p>The allowance is also bypassable. "Delete local data" clears the identity and the counter, and the new device key gets a fresh row with ten more games. Fixing it needs accounts, which would break the no-account design.</p></div>
         </details>
         <details class="qa__item">
           <summary class="qa__q">Who gets charged for a game?</summary>
-          <div class="qa__a"><p>Only the host, and only once per room. Opening a room is free, so a group can gather, pick a deck, argue about it, and only then spend anything. Guests are never charged for anything, and a host who reconnects or reloads the app is not charged twice.</p></div>
+          <div class="qa__a"><p>Nobody, because no payments were ever switched on. In the code, only the host spends a local credit, and only once per room: <code>games.credit_consumption_key</code> prevents a reconnect charging the same room twice. Guests are never debited.</p></div>
         </details>
         <details class="qa__item">
           <summary class="qa__q">Are there ads?</summary>
-          <div class="qa__a"><p>One short break between games, for free hosts only. Never during a question, never during a reveal, never to guests, and never to DEEPER+. There is no ad SDK in the app at the moment, so in practice there is no ad break either. See the <a href="./privacy-policy.html">privacy policy</a> for where that sits.</p></div>
-        </details>
-        <details class="qa__item">
-          <summary class="qa__q">What is DEEPER+ exactly?</summary>
-          <div class="qa__a"><p>Three things: unlimited hosted games, the First Date, Midnight Conversations and After Dark decks, and no ad break. It does not unlock extra questions, because the catalogue is already eight hundred of them.</p></div>
+          <div class="qa__a"><p>No. <code>src/lib/ads.ts</code> is a console-only stub and no advertising SDK is wired up. An early version of the copy described a between-games placement that was never implemented. See the <a href="./privacy-policy.html">data handling notes</a>.</p></div>
         </details>
       </div>
     </div>
@@ -191,27 +194,27 @@
       <div class="qa mt-lg">
         <details class="qa__item">
           <summary class="qa__q">What happens to the answers I write?</summary>
-          <div class="qa__a"><p>They are held on your phone, and in an encrypted room cache that expires two hours after the room is created whether or not you finish. They are deleted the moment the game ends. They are never written to the database, never logged, and never sent to analytics. There is no answers table in the schema, which is the part that actually guarantees it.</p></div>
+          <div class="qa__a"><p>In the code, they are held on the phone and in an encrypted room cache that expires two hours after the room is created whether or not the game finishes. They are deleted when the game ends, never written to the database, never logged and never sent anywhere. There is no answers table in the schema, which is the part that actually guarantees it.</p></div>
         </details>
         <details class="qa__item">
           <summary class="qa__q">So can someone read my answers later?</summary>
-          <div class="qa__a"><p>No. The cache is AES-256-GCM encrypted under a key the server holds, and it is removed at the end of the game. If the encryption key is ever missing, the server refuses to store answers rather than quietly writing them in plain text, so the failure mode is a lost round rather than a leaked one.</p></div>
+          <div class="qa__a"><p>No. The cache is AES-256-GCM encrypted under a key the self-hosted server holds, and it is removed at the end of the game. If the encryption key is missing, the server refuses to store answers rather than quietly writing them in plain text, so the failure mode is a lost round rather than a leaked one.</p></div>
         </details>
         <details class="qa__item">
-          <summary class="qa__q">Do you track me across apps?</summary>
-          <div class="qa__a"><p>No. The app generates a random string on your phone, keeps it in local storage, and uses it as an account handle. It reads no IDFA, no IDFV, no Android Advertising ID, no IMEI and no MAC address. It also ships no advertising or analytics SDK, and it does not declare an iOS tracking permission string.</p></div>
+          <summary class="qa__q">Does it track players across apps?</summary>
+          <div class="qa__a"><p>No. The client generates a random string, keeps it in local storage and uses it as an account handle. It reads no IDFA, no IDFV, no Android Advertising ID, no IMEI and no MAC address. It ships no advertising or analytics SDK and declares no iOS tracking permission string. No server is operated today, so nobody is collecting these rows.</p></div>
         </details>
         <details class="qa__item">
-          <summary class="qa__q">What do you keep after the game is over?</summary>
-          <div class="qa__a"><p>Enough to stop a host charging the same room twice, and enough to count how many games have been played. Your display name, your room membership, which reactions you tapped and when. That is deleted on a ninety day cycle. Your account, your purchases and your premium status are not deleted on a timer, because deleting a purchase record would be a bookkeeping problem rather than a privacy improvement.</p></div>
+          <summary class="qa__q">What does the code keep after a game?</summary>
+          <div class="qa__a"><p>Enough to stop a host charging the same room twice, and enough to count games played: display name, room membership, which reactions were tapped and when. That is deleted on a ninety day cycle. Users, entitlements and purchase rows are not deleted on a timer.</p></div>
         </details>
         <details class="qa__item">
-          <summary class="qa__q">Can I get rid of my data?</summary>
-          <div class="qa__a"><p>There is no in-app delete button yet, and no account email to write to, which is a real gap. Uninstalling the app makes you unidentifiable, because the only link between you and the server is that random string on your phone. <a href="./privacy-policy.html">The policy</a> sets out what happens to an erasure request when one arrives.</p></div>
+          <summary class="qa__q">Is there an account deletion path?</summary>
+          <div class="qa__a"><p>No. The profile screen has a "Delete local data" action that clears the local identity and the free-game counter. It does not delete server-side rows, there is no account email and there is no operator to write to. If you self-host, erasure is your responsibility. <a href="./privacy-policy.html">The data handling notes</a> cover the detail.</p></div>
         </details>
         <details class="qa__item">
           <summary class="qa__q">Is it safe for younger players?</summary>
-          <div class="qa__a"><p>After Dark is age gated and asks for confirmation before the room is created. The other seven decks are general audience, but none of them are written for children specifically, and DEEPER is not certified as child-directed. Read the <a href="./privacy-policy.html">policy</a> for the detail on that.</p></div>
+          <div class="qa__a"><p>After Dark is age gated and asks for confirmation before the room is created. The other seven decks are general audience, but none were written for children specifically and the project makes no child-directed compliance claim. Read <a href="./privacy-policy.html">the data handling notes</a> for the detail.</p></div>
         </details>
       </div>
     </div>
@@ -220,45 +223,48 @@
   <section class="section section--tight">
     <div class="shell">
       <div class="head head--label">
-        <h2>The app itself</h2>
+        <h2>The code itself</h2>
       </div>
       <div class="qa mt-lg">
         <details class="qa__item">
-          <summary class="qa__q">Which devices does it run on?</summary>
-          <div class="qa__a"><p>iOS and Android, built with Expo. The deep link that joins a room from an invite only resolves on a real installed build, not the Expo Go preview app, so testing an invite means installing a development build first. That is also true for the person receiving the invite, which is the limitation covered above.</p></div>
+          <summary class="qa__q">Which platforms does it target?</summary>
+          <div class="qa__a"><p>iOS and Android, built with Expo SDK 57 and React Native. There is no web target. The server is TypeScript on Node with Express and Socket.IO, backed by Postgres and Redis. <code>app.json</code> still carries a placeholder EAS project id, which is how you can tell no build was ever submitted.</p></div>
         </details>
         <details class="qa__item">
-          <summary class="qa__q">Is it in the stores?</summary>
-          <div class="qa__a"><p>Not yet. There is no submitted build, which is why the buttons on this site are deliberately disabled rather than linking to a page that would 404. Nothing on this site is a demo: it describes the app's real behaviour, and there is nothing to install.</p></div>
+          <summary class="qa__q">Was it ever released?</summary>
+          <div class="qa__a"><p>No. There is no submitted build and no listing anywhere. Nothing on this site is a demo or a waitlist: it documents a repository that is published under MIT and not maintained.</p></div>
         </details>
         <details class="qa__item">
           <summary class="qa__q">Does it work offline?</summary>
-          <div class="qa__a"><p>No, and it cannot. A simultaneous reveal needs a server holding the authoritative state of the room, so the game tells you plainly when it cannot reach it rather than letting the room quietly drift out of sync.</p></div>
+          <div class="qa__a"><p>No, and it cannot. A simultaneous reveal needs a server holding the authoritative state of the room, so the client says plainly when it cannot reach it rather than letting the room quietly drift out of sync.</p></div>
         </details>
         <details class="qa__item">
           <summary class="qa__q">Is there a scoreboard?</summary>
-          <div class="qa__a"><p>Only in How Well Do You Know Me?, where a point is scored each time your prediction of the other person's answer matches what they actually said. The other seven decks have no score on purpose. The <a href="./how-to-play.html">how to play page</a> covers the difference.</p></div>
+          <div class="qa__a"><p>Only in How Well Do You Know Me?, where a point is scored each time a prediction of the other person's answer matches what they actually said. That deck is capped at two players, so groups never see a score. The <a href="./how-to-play.html">how to play page</a> covers the difference.</p></div>
         </details>
         <details class="qa__item">
           <summary class="qa__q">Something is broken. How do I report it?</summary>
-          <div class="qa__a"><p>There is no support address published yet, and no crash reporting SDK wired up, so a report has to come through whoever shared the build with you. That is another honest gap rather than a policy: it is listed here so nobody waits for a reply that has nowhere to arrive.</p></div>
+          <div class="qa__a"><p>You cannot, in any useful sense. The project is unmaintained and issues are not triaged. <a href="https://github.com/thesaveddev/deeper/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> says pull requests will not be merged. Fork it instead.</p></div>
+        </details>
+        <details class="qa__item">
+          <summary class="qa__q">Can I use this in my own project?</summary>
+          <div class="qa__a"><p>Yes. MIT allows it with attribution. The README lists the known limitations you would inherit, and the postmortem explains the product decisions worth not repeating.</p></div>
         </details>
       </div>
     </div>
   </section>
 
-  <section class="section" id="get-it">
+  <section class="section" id="source">
     <div class="shell">
       <div class="cta">
         <div class="glow glow--ember" aria-hidden="true"></div>
-        <h2>Still want to try it?</h2>
-        <p>Two phones, one room code, ten questions. The rest of this site explains exactly what happens.</p>
+        <h2>Take it, change it, ship it if you want.</h2>
+        <p>The source, the research and the reasoning are all in the repository. MIT, no roadmap, no maintainer.</p>
         <div class="cta__actions">
-          <span class="btn is-disabled" aria-disabled="true" title="Available once the app ships">App Store</span>
-          <span class="btn is-disabled" aria-disabled="true" title="Available once the app ships">Google Play</span>
+          <a class="btn" href="https://github.com/thesaveddev/deeper">View on GitHub</a>
           <a class="btn btn--ghost" href="./how-to-play.html">How to play</a>
         </div>
-        <p class="hero__note">Not in the stores yet.</p>
+        <p class="hero__note">Never launched. Open source under MIT.</p>
       </div>
     </div>
   </section>
@@ -275,7 +281,7 @@
       <a href="./faq.html">Questions</a>
       <a href="./privacy-policy.html">Privacy</a>
     </nav>
-    <p class="foot__legal">A game for people who would rather ask than guess. Made for iOS and Android.</p>
+    <p class="foot__legal">A game for people who would rather ask than guess. Open source, never launched, not maintained.</p>
   </div>
 </footer>
 

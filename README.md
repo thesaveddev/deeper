@@ -2,9 +2,54 @@
 
 Better questions. Better conversations.
 
-DEEPER is a native Expo SDK 57 / React Native 0.86 multiplayer conversation game with a TypeScript Node.js + Socket.IO backend and PostgreSQL as the durable database target.
+> **Status: never launched, now open source.**
+> DEEPER is a complete but never-shipped real-time multiplayer conversation
+> game. There is no app in the stores, no hosted server, no configured
+> payments, and no active development. It is published under the
+> [MIT License](LICENSE) as a reference implementation and as a record of why
+> the product was not pursued.
+>
+> Start with [docs/POSTMORTEM.md](docs/POSTMORTEM.md) for the decision, and
+> [docs/viability-assessment-2026-11-05.md](docs/viability-assessment-2026-11-05.md)
+> for the market research behind it. There is no roadmap and no support queue.
 
-**Privacy:** [docs/privacy-policy.md](docs/privacy-policy.md) — what the app actually stores, including the encrypted answer cache in Redis, the random device identifier, and the fact that no ad or analytics SDK ships today.
+DEEPER is an Expo SDK 57 / React Native 0.86 multiplayer conversation game for
+2–8 players, with a TypeScript Node.js + Socket.IO authoritative backend,
+PostgreSQL for durable records and Redis for live room state. One question per
+round, private answers, a synchronised reveal, reactions, then the next
+question. Eight decks, a prediction mode, an age-gated deck.
+
+Everything below is the original engineering documentation, kept intact so the
+code is useful to anyone forking it. Launch-specific claims have been
+corrected, and [Known limitations](#known-limitations) records what the code
+actually does rather than what the marketing site once said. The static site in
+[`site/`](site) has been rewritten to describe an open source project, not a
+product about to ship.
+
+**[CONTRIBUTING.md](CONTRIBUTING.md)** points at the interesting parts of the
+codebase and explains why pull requests will not be merged.
+
+**Privacy:** [docs/privacy-policy.md](docs/privacy-policy.md) — what this code
+would store *if you ran it yourself*, including the encrypted answer cache in
+Redis, the random device identifier, and the fact that no ad or analytics SDK
+ships. No service is operated by the author.
+
+## Contents
+
+- [Start the mobile app](#start-the-mobile-app)
+- [Live game state (Redis)](#live-game-state-redis)
+- [Database](#database)
+- [Two-client integration smoke test](#two-client-integration-smoke-test)
+- [DEEPER+ (RevenueCat)](#deeper-revenuecat) — inert, never configured
+- [App icon, splash and adaptive icon](#app-icon-splash-and-adaptive-icon)
+- [Building a dev build yourself](#building-a-dev-build-yourself)
+- [Data retention](#data-retention)
+- [Marketing site](#marketing-site)
+- [Question selection](#question-selection)
+- [Known limitations](#known-limitations)
+- [Other commands](#other-commands)
+- [Loading on a physical phone](#loading-on-a-physical-phone)
+- [Troubleshooting](#troubleshooting)
 
 ## Start the mobile app
 
@@ -102,9 +147,9 @@ npm --workspace infra/postgres run seed      # seed categories
 npm --workspace infra/postgres run reset     # drop everything (then re-run migrate)
 ```
 
-On boot the server syncs the question catalog (8 categories, 800 questions) into the database so room and game foreign keys always resolve.
+On boot the server syncs the question catalog into the database so room and game foreign keys always resolve. There are 8 categories and 800 question **IDs**, but only 160 hand-written prompts: each prompt is expanded by five mechanical suffix variants. See [Known limitations](#known-limitations).
 
-Free-game accounting is enforced by the unique `games.credit_consumption_key` column: a room is charged at most once, ever. The host's `free_hosted_games_remaining` is decremented atomically when the game starts; guests are never charged.
+Free-game accounting is enforced by the unique `games.credit_consumption_key` column: a room is charged at most once, ever. The host's `free_hosted_games_remaining` is decremented atomically when the game starts; guests are never charged. **The allowance itself is not secure**: the identity is a random device key, and clearing local data produces a new device key and therefore a fresh ten games. With no accounts this cannot be fixed server-side. It is documented rather than silently relied upon; do not deploy this as a real paywall.
 
 ## Two-client integration smoke test
 
@@ -120,7 +165,14 @@ Set `SMOKE_REDIS_URL` to additionally run the restart-survival check, which kill
 
 ## DEEPER+ (RevenueCat)
 
-Purchases go through the RevenueCat SDK. Plan names, prices and the "save X%" figure are all read from the App Store / Play Store, so nothing is hardcoded and the numbers are correct in the user's own currency and locale.
+> **Historical, inert code.** No RevenueCat account, products, entitlements,
+> API keys or webhook secret were ever configured, and the app was never
+> submitted to a store. No purchase has ever been made. This layer is kept
+> because the webhook verification semantics are the most reusable part of the
+> server, not because it is a working payment system. For local play set
+> `PREMIUM_ENFORCEMENT=off`, or delete the entitlement layer from your fork.
+
+Purchases would have gone through the RevenueCat SDK. Plan names, prices and the "save X%" figure are read from the App Store / Play Store, so nothing is hardcoded and the numbers would be correct in the user's own currency and locale.
 
 ```bash
 EXPO_PUBLIC_REVENUECAT_IOS_KEY=appl_xxx
@@ -196,7 +248,10 @@ file are the whole design; change them and re-run.
 | `assets/splash-icon.png` | 512² | Transparent mark over the `#0D0D12` splash background |
 | `assets/favicon.png` | 48² | Web |
 
-## Building a real dev build
+## Building a dev build yourself
+
+This is only needed if you want a native binary from your own fork. The project
+was never built for distribution.
 
 `npm run build:check` reports what is still missing. It validates the committed
 PNGs (dimensions, alpha, and that the mark actually covers the canvas rather than
@@ -260,8 +315,11 @@ npm --workspace @deeper/server run retention
 
 ## Marketing site
 
-[`site/`](site) is the public site: a hand-written static bundle, no framework and
-no build step. Five pages, all sharing one stylesheet.
+[`site/`](site) is a hand-written static bundle, no framework and no build
+step. Five pages, all sharing one stylesheet. It was originally written as a
+pre-launch product site; for the open source release its copy was rewritten so
+it describes a repository rather than an app that is about to ship. The design
+work was kept because it is the most visually interesting part of the project.
 
 | Page | What it is |
 | --- | --- |
@@ -334,7 +392,7 @@ Search plumbing is generated too: `sitemap.xml`, `robots.txt`, the
 
 ```bash
 npm run site:serve   # http://localhost:4173
-npm run site:audit   # 42 static design and truthfulness gates
+npm run site:audit   # 45 static design and truthfulness gates
 npm run site:build   # policy page, then share images, then the SEO files
 npm run site:og      # just the share images
 npm run site:seo     # just the sitemap, robots and head tags
@@ -346,48 +404,55 @@ block in `site/tokens.css`: the type metrics and the wrapping are the site's own
 rather than an approximation. It drives Chrome over the DevTools protocol on a
 plain WebSocket, so it adds no browser-automation dependency.
 
-Two things about it are deliberate:
+Three things about it are deliberate:
 
 - **Every number and every quoted question is real.** The deck counts, player
-  limits, question counts, room-code length and retention windows come from
-  `packages/content`, `packages/shared` and the retention job. The questions
-  quoted on the site are verbatim base prompts from the shipping catalogue. The
-  illustrations of game states are HTML redrawn from the app's own strings, not
-  screenshots, so they can be themed and scaled like anything else.
-- **The structured data asserts nothing that is not true.** The JSON-LD carries
-  no price, no store URL, no `aggregateRating` and no review, because no store
-  listing exists to source any of them from, and the FAQ already tells the
-  reader the till is the real price. This is enforced, not just intended: the
-  `no fabricated structured data` gate rejects those fields, and it is deleted in
-  the same commit that adds a real store listing and a real price. A rating block
-  is the most common lie a site tells a crawler, so it gets a gate rather than a
-  code review.
+  limits, room-code length and retention windows come from `packages/content`,
+  `packages/shared` and the retention job. The questions quoted on the site are
+  verbatim base prompts from the catalogue. The site no longer advertises an
+  "800 questions" figure, because those 800 IDs are 160 prompts with five suffix
+  variants. The illustrations of game states are HTML redrawn from the app's own
+  strings, not screenshots, so they can be themed and scaled like anything else.
+- **The structured data describes source code, not a product.** JSON-LD is
+  `SoftwareSourceCode` with a `codeRepository` and a `license`. It carries no
+  price, no store URL, no `downloadUrl`, no `aggregateRating` and no review. A
+  rating block is the most common lie a site tells a crawler, so the
+  `no fabricated structured data` gate rejects those fields rather than leaving
+  it to code review.
 - **There is no social proof, because there is none.** No testimonials, no user
-  counts, no logo wall, and the store buttons are disabled rather than pointing
-  at a 404. A pre-launch product that invents its traction is worse than one that
-  admits it is early.
+  counts, no logo wall. The call to action points at the GitHub repository, not
+  at an app store. Gates assert that a source link is present on every page and
+  that no page promises a download, a launch date or a price.
 
 `site/privacy-policy.html` is generated from [`docs/privacy-policy.md`](docs/privacy-policy.md)
 so the markdown stays the single source of truth, and CI fails if the two drift.
 The app icon, adaptive icon and favicon in `site/assets/` are written by
 `npm run assets` rather than copied by hand.
 
-The remaining honesty gaps are documented on the site itself, in the FAQ and in
-`docs/privacy-policy.md`: no EAS project id, no submitted build, no support
-address, no in-app account deletion, and **no web client**, so every player has
-to install the app. That last one is enforced by an audit gate rather than by
-good intentions: the site may not claim anyone can join from a browser unless
-`app.json` gains a `web` target, because an early draft of the copy claimed
-exactly that and it was false.
+The site states plainly that the app was never launched and is not maintained.
+`docs/privacy-policy.md` now opens with the same disclosure: no service is
+operated by the author, and anyone self-hosting becomes the operator.
+
+One original gate survives for a good reason: the site may not claim anyone can
+join from a browser unless `app.json` gains a `web` target. An early draft of
+the copy claimed exactly that and it was false. That guard is coupled to the
+build config rather than to a phrase list, which is the right pattern.
+
+One artefact of the old site remains: canonical and OG URLs still point at
+`https://example.invalid`, a domain that was never hosted. They were left alone
+because changing the origin would invalidate the sitemap, canonicals and share
+image metadata in one sweep. If you deploy the site, set `ORIGIN` in both
+`tools/build-seo.mjs` and `tools/audit-site.mjs`.
 
 ## Question selection
 
-Each deck holds 100 questions and a game uses 10, so a deck comes all the way
-round every ten games.
+Each deck holds 100 question IDs and a game uses 10, so the ID pool comes all
+the way round every ten games. Those 100 IDs are 20 base prompts × 5 suffix
+variants, so the *perceived* variety is 20 questions per deck, not 100.
 
 `getQuestions` in `packages/content` used to walk the pool from index 0, which
 meant **every game of a deck played the identical ten questions** and 720 of the
-800 questions could never appear. It is now a Fisher-Yates draw.
+800 IDs could never appear. It is now a Fisher-Yates draw.
 
 `services/server/src/question-selector.ts` adds the no-repeat window. The
 exclusion set is read from `games` + `game_questions`, which already record what
@@ -431,6 +496,23 @@ separate erotic add-on product. Both are recorded in `.hallmark/log.json` and
 this section. Generation in particular would contradict the privacy claim the
 product is built on, and the writing is the product, so the useful version is an
 offline seeding tool with human review rather than a live call.
+
+## Known limitations
+
+These are real properties of the code, recorded so a fork does not inherit them
+as surprises. They are also the reasons the product was not pursued.
+
+| Limitation | Where | Consequence |
+| --- | --- | --- |
+| **160 prompts, not 800 questions** | `packages/content/src/index.ts` | Each of 20 prompts per deck is expanded with five suffix strings (`" — on a quiet morning?"`). The 800 IDs are not 800 distinct questions, and the same base prompt can recur inside one game. `question-selector.ts` assumes a 100-deep pool per deck. |
+| **The free-game allowance is bypassable** | `src/lib/freeGames.ts`, `app/profile.tsx` | "Delete local data" clears the identity and the counter; the new device key gets a fresh row with ten games. Unfixable without accounts, which would break the no-account privacy promise. |
+| **Prediction mode is 2-player only** | `services/server/src/game-room.ts` | `gameMode` is set only when `categoryId === 'know-me'`, and that deck is capped at 2 players. The one replayable mechanic can never be played in a 3–8 player room. |
+| **Premium decks are couple-oriented** | `packages/content/src/index.ts` | `first-date`, `late-night` and `after-dark` are paid; the 2–8 player group decks (`deep`, `funny`, `friends`) are free. The differentiated experience is the free one. |
+| **No web client** | `app.json`, `src/lib/socket.ts` | Every player needs a native install. There is no room link a guest can follow, which is the single biggest distribution problem. |
+| **No horizontal scale-out** | `services/server/src/room-registry.ts` | Redis stores state but there is no pub/sub fan-out. Two server instances would each hold their own connection set. |
+| **No production deployment** | `app.json`, `eas.json`, `.env.example` | `extra.eas.projectId` is a placeholder; the dev profile points at a LAN address; no HTTPS server, RevenueCat products, analytics, crash reporting or support address were ever set up. |
+| **No in-app data deletion** | `docs/privacy-policy.md` | Clearing local data does not delete server-side rows. The retention job is the only erasure mechanism. |
+| **Monetisation is inert** | `services/server/src/revenuecat.ts` | No products or webhook secret were configured. Treat it as reference code, not a payment system. |
 
 ## Other commands
 

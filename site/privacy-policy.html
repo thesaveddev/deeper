@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Privacy Policy: DEEPER</title>
-<meta name="description" content="What DEEPER stores, what it never stores, and how long it keeps it." />
+<title>Data handling: DEEPER</title>
+<meta name="description" content="What the DEEPER code stores, for how long, and why. No service is operated; this describes a self-hosted deployment." />
 <meta name="robots" content="index, follow" />
 <meta name="theme-color" content="#0D0D12" />
-<meta property="og:title" content="Privacy Policy: DEEPER" />
-<meta property="og:description" content="What DEEPER stores, what it never stores, and how long it keeps it." />
+<meta property="og:title" content="Data handling: DEEPER" />
+<meta property="og:description" content="What the DEEPER code stores, for how long, and why. No service is operated; this describes a self-hosted deployment." />
 <link rel="icon" href="./assets/favicon.png" sizes="48x48" />
 <link rel="apple-touch-icon" href="./assets/icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -37,30 +37,31 @@
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Privacy: what we keep, for how long, and why.">
+<meta property="og:image:alt" content="Data handling: what the code keeps, for how long, and why.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Privacy Policy: DEEPER">
-<meta name="twitter:description" content="What DEEPER stores, for how long, and why. What never leaves your device, what is encrypted, and what is deleted when a game ends.">
+<meta name="twitter:title" content="Data handling: DEEPER">
+<meta name="twitter:description" content="What the DEEPER code stores, for how long, and why. No service is operated; this describes a self-hosted deployment.">
 <meta name="twitter:image" content="https://example.invalid/assets/og/privacy-policy.png">
-<meta name="twitter:image:alt" content="Privacy: what we keep, for how long, and why.">
+<meta name="twitter:image:alt" content="Data handling: what the code keeps, for how long, and why.">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
+  "@type": "SoftwareSourceCode",
   "name": "DEEPER",
   "alternateName": "DEEPER. Better questions. Better conversations.",
   "url": "https://example.invalid/privacy-policy.html",
-  "description": "What DEEPER stores, for how long, and why. What never leaves your device, what is encrypted, and what is deleted when a game ends.",
-  "applicationCategory": "GameApplication",
-  "operatingSystem": "iOS, Android",
+  "description": "What the DEEPER code stores, for how long, and why. No service is operated; this describes a self-hosted deployment.",
+  "codeRepository": "https://github.com/thesaveddev/deeper",
+  "license": "https://github.com/thesaveddev/deeper/blob/main/LICENSE",
+  "programmingLanguage": [
+    "TypeScript",
+    "JavaScript"
+  ],
+  "runtimePlatform": "Expo / React Native, Node.js",
   "softwareVersion": "0.1.0",
   "inLanguage": "en",
   "image": "https://example.invalid/assets/og/privacy-policy.png",
-  "isAccessibleForFree": true,
-  "offers": {
-    "@type": "Offer",
-    "availability": "https://schema.org/InStock"
-  }
+  "isAccessibleForFree": true
 }
 </script>
 <!-- /seo:head -->
@@ -80,7 +81,7 @@
       <a href="./privacy-policy.html" aria-current="page">Privacy</a>
     </div>
     <span class="nav__slot"></span>
-    <a class="btn" href="./index.html#get-it">Get the app</a>
+    <a class="btn" href="https://github.com/thesaveddev/deeper">View on GitHub</a>
     <details class="nav__toggle">
       <summary class="btn btn--ghost" aria-label="Open menu">Menu</summary>
       <div class="nav__menu">
@@ -120,213 +121,145 @@
   <section class="pagehead">
     <div class="glow glow--violet" aria-hidden="true"></div>
     <div class="shell pagehead__inner">
-      <span class="eyebrow">Privacy</span>
-      <h1>What DEEPER stores, what it never stores, and how long it keeps it.</h1>
-      <p>Written to match the code in this repository, not to match what a policy usually says.</p>
+      <span class="eyebrow">Data handling</span>
+      <h1>What the code keeps, what it never keeps, and why.</h1>
+      <p>No DEEPER service is operated. This describes the source and what a self-hoster takes on.</p>
     </div>
   </section>
 
   <article class="shell policy">
-<p><strong>Last updated:</strong> 26 September 2026</p>
-<p><strong>Applies to:</strong> DEEPER (&quot;Better questions. Better conversations.&quot;), for iOS and Android.</p>
-<p>This policy describes what the shipped DEEPER application actually does with your</p>
-<p>data. It is written to match the code in this repository, not an aspiration.</p>
+<p><strong>Last updated:</strong> 9 November 2026</p>
+<p><strong>Applies to:</strong> the DEEPER source code in this repository, and to any server you run yourself.</p>
+<p><strong>Status: no service is operated.</strong> DEEPER was built and never launched. There is</p>
+<p>no published app, no hosted server, no database run by the author, no</p>
+<p>payment account and no support desk. Nobody is collecting data through this</p>
+<p>project today.</p>
+<p>This is not a privacy policy for a service, because there is no service. It is a</p>
+<p>description of what the code does with data when you build and run it yourself.</p>
+<p>If you self-host DEEPER, you are the operator, and the obligations below are</p>
+<p>yours.</p>
 <hr />
 <h2>1. The short version</h2>
-<p>DEEPER is a two-or-more-people conversation game. People on their own phones join</p>
-<p>a private room, answer the same question privately, and then reveal their answers</p>
-<p>to each other at the same moment.</p>
-<p>The design rule underneath everything below is:</p>
-<p>&gt; **Your answers are the point of the game, and they are the one thing DEEPER does</p>
-<p>&gt; not keep.**</p>
-<p>There is no account to create. We never ask for your name, email address, phone</p>
-<p>number, or contacts. We do not read your camera, microphone, photos or files. We do</p>
-<p>not read your contacts list. We do not build an advertising profile of you.</p>
+<p>DEEPER is a conversation game for two to eight people on separate phones. Each</p>
+<p>phone joins a room, answers the same question in private, and every answer is</p>
+<p>revealed at the same moment.</p>
+<p>**Answers are the point of the game, and they are the one thing the code does not</p>
+<p>persist.** There is no answers table in the schema. There is no account, no</p>
+<p>email address, no password, no advertising identifier, and no analytics or</p>
+<p>crash reporting SDK wired up in the build.</p>
 <hr />
-<h2>2. What we collect</h2>
+<h2>2. What the client creates</h2>
 <h3>2.1 A random device identifier</h3>
-<p>The first time you open DEEPER, the app generates a random string (for example</p>
-<p><code>m4k2zp-9fq1x</code>) and saves it in the app's own private storage on your phone.</p>
-<ul>
-<li>It is <strong>not</strong> your device's hardware identifier. DEEPER does not read the IDFA,</li>
-</ul>
-<p>  the IDFV, the Android Advertising ID, or any IMEI, MAC address or serial number.</p>
-<ul>
-<li>It is not derived from anything about you. It is a random value.</li>
-<li>We generate it ourselves. It is not supplied by Apple, Google, or any advertising</li>
-</ul>
-<p>  network.</p>
-<p>We send this identifier to our server so that we can keep your free-game allowance,</p>
-<p>your display name, and your premium status attached to you across app restarts and</p>
-<p>reconnects. On our servers it is stored in a column called <code>device_id</code>.</p>
-<p><strong>What it lets someone do:</strong> an operator of our servers, or anyone who obtains our</p>
-<p>database, can see that these records belong to the same install — they cannot see</p>
-<p>who the person is.</p>
-<h3>2.2 Your display name</h3>
-<p>If you type a display name, we use it in the room so other players can see who is</p>
-<p>who, and we store it alongside your device identifier. Please do not put your real</p>
-<p>name, phone number, or social handle in it. If you leave it blank, DEEPER assigns</p>
-<p>you a short random name.</p>
+<p>On first launch the client generates a random string and stores it in the app's</p>
+<p>own private storage (AsyncStorage, under <code>deeper.identity</code>). It is not a</p>
+<p>hardware identifier: the code reads no IDFA, IDFV, Android Advertising ID, IMEI,</p>
+<p>MAC address or serial number, and declares no iOS tracking permission string.</p>
+<p>The identifier is sent to the server and stored in <code>users.device_id</code>. An</p>
+<p>operator of a self-hosted server can see that several rows belong to the same</p>
+<p>install, but cannot see who the person is.</p>
+<p><code>app/profile.tsx</code> offers &quot;Delete local data&quot;, which clears the identifier and</p>
+<p>resets the free-game counter. A new identifier creates a new user row with a</p>
+<p>fresh allowance. This is a known limitation, documented in the README and the</p>
+<p>postmortem, not a privacy control.</p>
+<h3>2.2 Display name</h3>
+<p>An optional display name is stored with the device identifier and shown to</p>
+<p>other players in the room. If left blank, the code assigns a random short name.</p>
+<p>The code does not validate the content of a display name, so a self-hoster</p>
+<p>should say plainly that names are visible to everyone in the room.</p>
 <h3>2.3 Room and game activity</h3>
-<p>To make a game work, the server records the shape of a session:</p>
-<table><thead><tr><th scope="col">What</th><th scope="col">Why</th></tr></thead><tbody><tr><td>A room code, the deck you chose, when it was created</td><td>to let players join it</td></tr><tr><td>Who joined, when, and under what display name</td><td>to build the player list</td></tr><tr><td>Which questions were served, in what order</td><td>to run the round</td></tr><tr><td>Which reactions you tapped and when</td><td>to show reaction totals</td></tr><tr><td>When a game started and ended, and why it ended</td><td>session records</td></tr></tbody></table>
-<p>This is gameplay history. It is <strong>not</strong> a transcript of what was said. The questions</p>
-<p>are written by us; we do not store the answers.</p>
-<h3>2.4 Your answers and predictions — the important part</h3>
-<p><strong>Answers are not written to our database.</strong> There is no answers table. This is a</p>
-<p>deliberate design decision, not an oversight, and it is enforced by the database</p>
-<p>schema itself.</p>
-<p>So where do answers live while the game is running?</p>
+<table><thead><tr><th scope="col">What</th><th scope="col">Why</th></tr></thead><tbody><tr><td>A room code, the deck chosen, when it was created</td><td>to let players join</td></tr><tr><td>Who joined, when, and under what display name</td><td>to build the player list</td></tr><tr><td>Which question IDs were served, in what order</td><td>to run the round and avoid repeats</td></tr><tr><td>Reactions and their timestamps</td><td>to show reaction totals</td></tr><tr><td>When a game started and ended, and why</td><td>session records</td></tr></tbody></table>
+<p>This is gameplay history, never a transcript. The question text is generated in</p>
+<p><code>packages/content/src/index.ts</code>; the answers are not stored.</p>
+<hr />
+<h2>3. Answers, the important part</h2>
+<p>Answers are never written to PostgreSQL. There is no column and no table for</p>
+<p>them, which is the part that actually guarantees it.</p>
+<p>While a game is live, an answer exists in two places:</p>
 <ul>
-<li><strong>On your phone, in memory</strong> — while you are typing and before you submit.</li>
-<li><strong>On the game server, in an encrypted cache.</strong> To make everyone's phones reveal at</li>
+<li>In the client's memory, before submission.</li>
+<li>In an encrypted Redis cache, so every phone can reveal at the same instant.</li>
 </ul>
-<p>  the same instant, an answer has to be held centrally for a moment. We hold it in</p>
-<p>  an in-memory cache (Redis), <strong>encrypted with AES-256-GCM</strong>, using a key that is</p>
-<p>  stored on the server and never on your device.</p>
+<p>  The value is sealed with AES-256-GCM under a scrypt-derived key from</p>
+<p>  <code>LIVE_STATE_SECRET</code>, which lives only in server environment variables.</p>
+<p>The cache entry is deleted when the game ends and independently expires after</p>
+<p>two hours. If <code>LIVE_STATE_SECRET</code> is missing,</p>
+<p><code>services/server/src/live-store.ts</code> refuses to write cleartext: the round is</p>
+<p>lost and a warning is logged. Losing a round is the intended failure, not a</p>
+<p>hidden trade-off.</p>
+<p>The code does not write answer text to PostgreSQL, to server logs, to crash</p>
+<p>reports, or to any third party, and does not use it for training. It is shown</p>
+<p>only to the other players in the same room, at the reveal. The fact that a</p>
+<p>player submitted something in a given position is recorded, so the room can</p>
+<p>synchronise; the content is not.</p>
+<hr />
+<h2>4. Third parties</h2>
+<table><thead><tr><th scope="col">Recipient</th><th scope="col">What it would get</th><th scope="col">Status in this repository</th></tr></thead><tbody><tr><td>RevenueCat</td><td>device identifier, purchase status</td><td>adapter present, never configured</td></tr><tr><td>Apple or Google</td><td>payment details</td><td>never used, no store build exists</td></tr><tr><td>Ad networks</td><td>nothing</td><td>no SDK, console-only stub</td></tr><tr><td>Analytics and crash reporting</td><td>nothing</td><td>no SDK, console-only stubs</td></tr></tbody></table>
+<p><code>src/lib/premium.ts</code> lazily loads <code>react-native-purchases</code> and</p>
+<p><code>services/server/src/revenuecat.ts</code> verifies webhook signatures, but no</p>
+<p>products, API keys or webhook secrets were ever created. <code>src/lib/ads.ts</code>,</p>
+<p><code>src/lib/analytics.ts</code> and <code>src/lib/sentry.ts</code> log to the console and do</p>
+<p>nothing else. No advertising identifier is read.</p>
+<p>The copy that once described a between-games ad placement described a plan,</p>
+<p>not an implementation. That plan was dropped.</p>
+<hr />
+<h2>5. Retention</h2>
+<table><thead><tr><th scope="col">Data</th><th scope="col">Retention</th></tr></thead><tbody><tr><td>Encrypted answers in Redis</td><td>deleted at game end, hard expiry 2 hours</td></tr><tr><td>Answers in PostgreSQL</td><td>never stored</td></tr><tr><td>Device identifier, display name, entitlement rows</td><td>no automatic deletion</td></tr><tr><td>Room and game history</td><td>90 days</td></tr><tr><td>Webhook delivery records</td><td>365 days</td></tr></tbody></table>
+<p><code>services/server/src/retention.ts</code> runs a sweep every six hours and deletes</p>
+<p>expired rooms, games, player lists, question orders, reactions and webhook</p>
+<p>records. It never deletes users, profiles, entitlements or purchases.</p>
+<p>No hosted deployment exists, so no sweep is running anywhere today.</p>
+<hr />
+<h2>6. If you self-host</h2>
+<p>You become the data controller. At minimum:</p>
 <ul>
-<li><strong>It is deleted when the game ends</strong>, and independently expires after <strong>2 hours</strong></li>
+<li>Set <code>LIVE_STATE_SECRET</code>, and keep it out of version control. The server will</li>
 </ul>
-<p>  even if the game never formally ends and the server is never contacted again.</p>
-<p>What we specifically do <strong>not</strong> do with answers:</p>
+<p>  refuse to cache answers without it.</p>
 <ul>
-<li>We do not write them to PostgreSQL. Ever.</li>
-<li>We do not write them to server logs, error logs or crash reports.</li>
-<li>We do not send them to analytics, advertising, or any third party.</li>
-<li>We do not use them to train anything.</li>
-<li>We do not show them to anyone except the other players in your own room, at the</li>
+<li>Terminate TLS in front of the server. A development server without TLS is not</li>
 </ul>
-<p>  reveal.</p>
-<p>When the game ends, the encrypted copy is deleted. The fact that a player submitted</p>
-<p>*something* in a given position is recorded (so the game can be scored and</p>
-<p>synchronised); the content is not.</p>
-<p><strong>One deliberate exception, stated plainly:</strong> in a local development setup where the</p>
-<p>encryption key has not been configured, DEEPER will not silently downgrade to</p>
-<p>storing answers unencrypted. The room keeps working, the round is lost, and the</p>
-<p>server logs a warning. Losing a round is the intended failure, not a hidden</p>
-<p>trade-off.</p>
-<h3>2.5 Purchases</h3>
-<p>If you buy DEEPER+, the app uses RevenueCat (a third-party subscription service) to</p>
-<p>talk to the App Store and Google Play on your behalf. RevenueCat receives your</p>
-<p>purchase, subscription status, and an identifier that is your DEEPER device</p>
-<p>identifier from section 2.1.</p>
-<p>RevenueCat then sends our server a notification when your subscription starts,</p>
-<p>renews, expires, or is refunded. We store the fact that this happened, the product</p>
-<p>you bought, and the store transaction reference. **We do not store your card</p>
-<p>details — we never see them.** They go directly between you and Apple/Google.</p>
-<hr />
-<h2>3. Advertising</h2>
-<p>**In the current build, DEEPER contains no advertising SDK, shows no ads, and does</p>
-<p>not track you.** The ad module is a placeholder that logs to the console, and the</p>
-<p>iOS build declares no tracking permission string at all.</p>
-<p>This is worth being blunt about, because an earlier revision of the iOS</p>
-<p>configuration did declare an App Tracking Transparency usage string while the app</p>
-<p>never requested tracking. We removed it. Declaring a string is not asking for</p>
-<p>anything — iOS only shows the tracking prompt if the app calls the permission</p>
-<p>request — but a permission string with no permission behind it is a misleading</p>
-<p>thing to ship, so it is gone. No prompt appears, no tracking identifier is read, and</p>
-<p>no data is shared with any ad network.</p>
-<p>If advertising is enabled in a future version, the change would be:</p>
+<p>  a deployment.</p>
 <ul>
-<li>ads shown <strong>only between games</strong>, never during answering or reveal;</li>
-<li>shown <strong>only to free hosts</strong> — never to guests, never to premium users;</li>
-<li>optional, skippable, and never blocking;</li>
-<li>and this policy would be updated before that version shipped, describing the ad</li>
+<li>Decide how you will handle access and erasure requests. The client has no</li>
 </ul>
-<p>  partners used, the App Tracking Transparency prompt, and the App Store privacy</p>
-<p>  nutrition labels.</p>
-<p>We will not quietly add tracking to a build that describes itself this way.</p>
-<hr />
-<h2>4. Analytics and crash reporting</h2>
-<p><strong>Not active.</strong> There is no analytics SDK or crash-reporting SDK in the build. The</p>
-<p>adapters exist as console-only placeholders and are inert.</p>
-<p>If those are switched on later, the intended rule — already written into the</p>
-<p>analytics adapter's source comments and enforced in review — is that answer text,</p>
-<p>private conversation content, and display names are never sent as event</p>
-<p>properties. Only structural events (a game started, a round completed) would be</p>
-<p>sent.</p>
-<hr />
-<h2>5. Who we share data with</h2>
-<table><thead><tr><th scope="col">Recipient</th><th scope="col">What they get</th><th scope="col">Why</th></tr></thead><tbody><tr><td>Apple / Google</td><td>everything about your purchase</td><td>we are not involved; payment goes store-to-store</td></tr><tr><td>RevenueCat</td><td>your device identifier and purchase status</td><td>to verify and deliver your subscription</td></tr><tr><td>Our hosting provider</td><td>everything described above</td><td>they run the servers</td></tr><tr><td>Our ad / analytics providers</td><td><strong>nothing — none are in use</strong></td><td>—</td></tr></tbody></table>
-<p>We do not sell personal information. We have not done so and will not.</p>
-<p>We do not share your answers, your display name, or your gameplay history with</p>
-<p>anyone for advertising or marketing purposes.</p>
-<hr />
-<h2>6. How long we keep things</h2>
-<table><thead><tr><th scope="col">Data</th><th scope="col">Retention</th></tr></thead><tbody><tr><td>Encrypted answers in cache</td><td>deleted at game end, hard expiry 2 hours</td></tr><tr><td>Your answers in the database</td><td><strong>never stored</strong></td></tr><tr><td>Device identifier, display name, purchase status</td><td>for as long as your account exists</td></tr><tr><td>Room and game history (which questions, reactions, timestamps)</td><td><strong>90 days</strong>, then deleted automatically</td></tr><tr><td>Store webhook delivery records</td><td>365 days</td></tr><tr><td>Server logs</td><td>rotated; contain no answers</td></tr></tbody></table>
-<p>The 90-day and 365-day windows are enforced by a scheduled sweep in the server</p>
-<p>(<code>services/server/src/retention.ts</code>), not by good intentions. It runs every six</p>
-<p>hours, deletes expired rooms, games, player lists, question orders, reactions and</p>
-<p>webhook records, and is covered by the integration test suite.</p>
-<p>The sweep <strong>never</strong> deletes your account, your display name, your premium</p>
-<p>entitlement, or your purchase history. Retention housekeeping has no business</p>
-<p>destroying billing records; if you want those gone, that is an erasure request</p>
-<p>(see below), not a sweep.</p>
-<hr />
-<h2>7. Your rights</h2>
-<p>Depending on where you live (GDPR / UK GDPR, the California CCPA/CPRA, and similar</p>
-<p>laws), you may have the right to:</p>
+<p>  account and no &quot;delete my server data&quot; control, so there is no way for a</p>
+<p>  player to identify themselves to you.</p>
 <ul>
-<li><strong>access</strong> the personal data we hold about you;</li>
-<li><strong>correct</strong> it — you can change your display name in the app;</li>
-<li><strong>delete</strong> it;</li>
-<li><strong>restrict</strong> or <strong>object</strong> to processing;</li>
-<li><strong>port</strong> it to another provider;</li>
-<li><strong>withdraw consent</strong>, where processing relies on consent;</li>
-<li><strong>complain</strong> to your local data protection authority.</li>
+<li>Write your own privacy notice and your own terms for your own deployment.</li>
 </ul>
-<p>Note that we do not rely on consent as our legal basis for the core service: the</p>
-<p>game cannot be played without a device identifier, and the identifier is random</p>
-<p>and carries no meaning outside your own install. Consent is relevant only to</p>
-<p>advertising and analytics, neither of which is active.</p>
-<h3>How to actually get your data</h3>
-<p>DEEPER has no account, no email address, and no in-app &quot;delete my data&quot; button, so</p>
-<p>we cannot look you up from an email. To exercise any of these rights, contact us</p>
-<p>from the <strong>same device</strong>, describing your DEEPER display name and roughly when you</p>
-<p>last played, and we will identify and delete the matching record. We will respond</p>
-<p>within 30 days.</p>
-<p>Installing or deleting the app removes the local device identifier from your phone.</p>
-<p>Because that identifier is the only thing linking our server-side record to your</p>
-<p>install, <strong>deleting the app makes you effectively unidentifiable to us</strong>, though we</p>
-<p>do not automatically treat that as a deletion request.</p>
-<hr />
-<h2>8. Security</h2>
+<p>  This file describes the code, not your service.</p>
 <ul>
-<li>Answers held centrally are encrypted with <strong>AES-256-GCM</strong> under a scrypt-derived</li>
+<li>Decide whether the game is appropriate for younger players. The After Dark</li>
 </ul>
-<p>  key held only in server environment variables.</p>
+<p>  deck is age gated in the client; nothing here is a COPPA compliance claim.</p>
+<p>Uninstalling the app removes the local identifier, which is the only link to</p>
+<p>the server-side row. The server does not treat that as an erasure request.</p>
+<hr />
+<h2>7. Known gaps, stated plainly</h2>
 <ul>
-<li>Store webhook deliveries are verified by <strong>HMAC-SHA256</strong> over the raw request body</li>
+<li>The ten-game hosting allowance is stored against a local identity and can be</li>
 </ul>
-<p>  with constant-time comparison, and rejected if the timestamp is more than 5</p>
-<p>  minutes old.</p>
+<p>  reset by clearing local data. There is no server-side identity to prevent it.</p>
 <ul>
-<li>In production this traffic must be TLS. A development server without TLS is not an</li>
+<li>There is no account deletion path and no support address.</li>
+<li>There is no web client. Every player needs the native app, and the invite is</li>
 </ul>
-<p>  acceptable deployment.</p>
-<p>No system is perfect. If you discover a vulnerability, please tell us privately</p>
-<p>rather than publicly.</p>
+<p>  a <code>deeper://</code> custom-scheme link that only resolves where the app is present.</p>
+<ul>
+<li>The RevenueCat webhook is implemented but was never connected to a real</li>
+</ul>
+<p>  account, so the entitlement path was never exercised with live purchases.</p>
+<p>These are reasons the project was not launched, not claims that it handles</p>
+<p>them. See the <a href="https://github.com/thesaveddev/deeper/blob/main/docs/POSTMORTEM.md">postmortem</a></p>
+<p>and the <a href="https://github.com/thesaveddev/deeper/blob/main/docs/viability-assessment-2026-11-05.md">viability assessment</a>.</p>
 <hr />
-<h2>9. Children</h2>
-<p>DEEPER is intended for adults and is <strong>not directed at children under 13</strong>. One</p>
-<p>deck (&quot;After Dark&quot;) is age-gated behind an explicit 18+ confirmation because of its</p>
-<p>content.</p>
-<p>We do not knowingly collect information from children. If you believe a child has</p>
-<p>used DEEPER, contact us and we will delete the record.</p>
-<p>DEEPER is not currently certified as COPPA-compliant and we do not claim to be.</p>
-<p>Deciding whether to add a kids mode or to formally restrict the service is an open</p>
-<p>product question, not a settled one, and we would rather say so than imply a</p>
-<p>compliance posture we do not have.</p>
-<hr />
-<h2>10. Changes to this policy</h2>
-<p>If we change what we collect or what we do with it, we will update this file in the</p>
-<p>DEEPER repository and the &quot;last updated&quot; date above, and — for material changes —</p>
-<p>tell you in the app before the change takes effect.</p>
-<hr />
-<h2>11. Contact</h2>
-<p>Opeyemi Olorunfemi — [address removed]</p>
-<p>Source: &lt;https://github.com/thesaveddev/deeper&gt; (this policy is version-controlled</p>
-<p>alongside the code it describes)</p>
+<h2>8. Changes and contact</h2>
+<p>This file is version-controlled alongside the code it describes. No one is</p>
+<p>maintaining it. If you fork the project, rewrite it to describe your own</p>
+<p>deployment.</p>
+<p>There is no support address and no security contact for the original project.</p>
+<p>Issues opened on the repository are not triaged and pull requests are not</p>
+<p>merged; see <a href="https://github.com/thesaveddev/deeper/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
   </article>
 </main>
 
@@ -340,7 +273,7 @@
       <a href="./faq.html">Questions</a>
       <a href="./privacy-policy.html">Privacy</a>
     </nav>
-    <p class="foot__legal">A game for people who would rather ask than guess. Made for iOS and Android.</p>
+    <p class="foot__legal">A game for people who would rather ask than guess. Open source, never launched, not maintained.</p>
   </div>
 </footer>
 

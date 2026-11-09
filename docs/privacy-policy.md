@@ -1,275 +1,180 @@
-# Privacy Policy — DEEPER
+# Privacy and data handling — DEEPER
 
-**Last updated:** 26 September 2026
-**Applies to:** DEEPER ("Better questions. Better conversations."), for iOS and Android.
+**Last updated:** 9 November 2026
+**Applies to:** the DEEPER source code in this repository, and to any server you run yourself.
 
-This policy describes what the shipped DEEPER application actually does with your
-data. It is written to match the code in this repository, not an aspiration.
+**Status: no service is operated.** DEEPER was built and never launched. There is
+no published app, no hosted server, no database run by the author, no
+payment account and no support desk. Nobody is collecting data through this
+project today.
+
+This is not a privacy policy for a service, because there is no service. It is a
+description of what the code does with data when you build and run it yourself.
+If you self-host DEEPER, you are the operator, and the obligations below are
+yours.
 
 ---
 
 ## 1. The short version
 
-DEEPER is a two-or-more-people conversation game. People on their own phones join
-a private room, answer the same question privately, and then reveal their answers
-to each other at the same moment.
+DEEPER is a conversation game for two to eight people on separate phones. Each
+phone joins a room, answers the same question in private, and every answer is
+revealed at the same moment.
 
-The design rule underneath everything below is:
-
-> **Your answers are the point of the game, and they are the one thing DEEPER does
-> not keep.**
-
-There is no account to create. We never ask for your name, email address, phone
-number, or contacts. We do not read your camera, microphone, photos or files. We do
-not read your contacts list. We do not build an advertising profile of you.
+**Answers are the point of the game, and they are the one thing the code does not
+persist.** There is no answers table in the schema. There is no account, no
+email address, no password, no advertising identifier, and no analytics or
+crash reporting SDK wired up in the build.
 
 ---
 
-## 2. What we collect
+## 2. What the client creates
 
 ### 2.1 A random device identifier
 
-The first time you open DEEPER, the app generates a random string (for example
-`m4k2zp-9fq1x`) and saves it in the app's own private storage on your phone.
+On first launch the client generates a random string and stores it in the app's
+own private storage (AsyncStorage, under `deeper.identity`). It is not a
+hardware identifier: the code reads no IDFA, IDFV, Android Advertising ID, IMEI,
+MAC address or serial number, and declares no iOS tracking permission string.
 
-- It is **not** your device's hardware identifier. DEEPER does not read the IDFA,
-  the IDFV, the Android Advertising ID, or any IMEI, MAC address or serial number.
-- It is not derived from anything about you. It is a random value.
-- We generate it ourselves. It is not supplied by Apple, Google, or any advertising
-  network.
+The identifier is sent to the server and stored in `users.device_id`. An
+operator of a self-hosted server can see that several rows belong to the same
+install, but cannot see who the person is.
 
-We send this identifier to our server so that we can keep your free-game allowance,
-your display name, and your premium status attached to you across app restarts and
-reconnects. On our servers it is stored in a column called `device_id`.
+`app/profile.tsx` offers "Delete local data", which clears the identifier and
+resets the free-game counter. A new identifier creates a new user row with a
+fresh allowance. This is a known limitation, documented in the README and the
+postmortem, not a privacy control.
 
-**What it lets someone do:** an operator of our servers, or anyone who obtains our
-database, can see that these records belong to the same install — they cannot see
-who the person is.
+### 2.2 Display name
 
-### 2.2 Your display name
-
-If you type a display name, we use it in the room so other players can see who is
-who, and we store it alongside your device identifier. Please do not put your real
-name, phone number, or social handle in it. If you leave it blank, DEEPER assigns
-you a short random name.
+An optional display name is stored with the device identifier and shown to
+other players in the room. If left blank, the code assigns a random short name.
+The code does not validate the content of a display name, so a self-hoster
+should say plainly that names are visible to everyone in the room.
 
 ### 2.3 Room and game activity
 
-To make a game work, the server records the shape of a session:
-
 | What | Why |
 | --- | --- |
-| A room code, the deck you chose, when it was created | to let players join it |
+| A room code, the deck chosen, when it was created | to let players join |
 | Who joined, when, and under what display name | to build the player list |
-| Which questions were served, in what order | to run the round |
-| Which reactions you tapped and when | to show reaction totals |
-| When a game started and ended, and why it ended | session records |
+| Which question IDs were served, in what order | to run the round and avoid repeats |
+| Reactions and their timestamps | to show reaction totals |
+| When a game started and ended, and why | session records |
 
-This is gameplay history. It is **not** a transcript of what was said. The questions
-are written by us; we do not store the answers.
-
-### 2.4 Your answers and predictions — the important part
-
-**Answers are not written to our database.** There is no answers table. This is a
-deliberate design decision, not an oversight, and it is enforced by the database
-schema itself.
-
-So where do answers live while the game is running?
-
-- **On your phone, in memory** — while you are typing and before you submit.
-- **On the game server, in an encrypted cache.** To make everyone's phones reveal at
-  the same instant, an answer has to be held centrally for a moment. We hold it in
-  an in-memory cache (Redis), **encrypted with AES-256-GCM**, using a key that is
-  stored on the server and never on your device.
-- **It is deleted when the game ends**, and independently expires after **2 hours**
-  even if the game never formally ends and the server is never contacted again.
-
-What we specifically do **not** do with answers:
-
-- We do not write them to PostgreSQL. Ever.
-- We do not write them to server logs, error logs or crash reports.
-- We do not send them to analytics, advertising, or any third party.
-- We do not use them to train anything.
-- We do not show them to anyone except the other players in your own room, at the
-  reveal.
-
-When the game ends, the encrypted copy is deleted. The fact that a player submitted
-*something* in a given position is recorded (so the game can be scored and
-synchronised); the content is not.
-
-**One deliberate exception, stated plainly:** in a local development setup where the
-encryption key has not been configured, DEEPER will not silently downgrade to
-storing answers unencrypted. The room keeps working, the round is lost, and the
-server logs a warning. Losing a round is the intended failure, not a hidden
-trade-off.
-
-### 2.5 Purchases
-
-If you buy DEEPER+, the app uses RevenueCat (a third-party subscription service) to
-talk to the App Store and Google Play on your behalf. RevenueCat receives your
-purchase, subscription status, and an identifier that is your DEEPER device
-identifier from section 2.1.
-
-RevenueCat then sends our server a notification when your subscription starts,
-renews, expires, or is refunded. We store the fact that this happened, the product
-you bought, and the store transaction reference. **We do not store your card
-details — we never see them.** They go directly between you and Apple/Google.
+This is gameplay history, never a transcript. The question text is generated in
+`packages/content/src/index.ts`; the answers are not stored.
 
 ---
 
-## 3. Advertising
+## 3. Answers, the important part
 
-**In the current build, DEEPER contains no advertising SDK, shows no ads, and does
-not track you.** The ad module is a placeholder that logs to the console, and the
-iOS build declares no tracking permission string at all.
+Answers are never written to PostgreSQL. There is no column and no table for
+them, which is the part that actually guarantees it.
 
-This is worth being blunt about, because an earlier revision of the iOS
-configuration did declare an App Tracking Transparency usage string while the app
-never requested tracking. We removed it. Declaring a string is not asking for
-anything — iOS only shows the tracking prompt if the app calls the permission
-request — but a permission string with no permission behind it is a misleading
-thing to ship, so it is gone. No prompt appears, no tracking identifier is read, and
-no data is shared with any ad network.
+While a game is live, an answer exists in two places:
 
-If advertising is enabled in a future version, the change would be:
+- In the client's memory, before submission.
+- In an encrypted Redis cache, so every phone can reveal at the same instant.
+  The value is sealed with AES-256-GCM under a scrypt-derived key from
+  `LIVE_STATE_SECRET`, which lives only in server environment variables.
 
-- ads shown **only between games**, never during answering or reveal;
-- shown **only to free hosts** — never to guests, never to premium users;
-- optional, skippable, and never blocking;
-- and this policy would be updated before that version shipped, describing the ad
-  partners used, the App Tracking Transparency prompt, and the App Store privacy
-  nutrition labels.
+The cache entry is deleted when the game ends and independently expires after
+two hours. If `LIVE_STATE_SECRET` is missing,
+`services/server/src/live-store.ts` refuses to write cleartext: the round is
+lost and a warning is logged. Losing a round is the intended failure, not a
+hidden trade-off.
 
-We will not quietly add tracking to a build that describes itself this way.
-
----
-
-## 4. Analytics and crash reporting
-
-**Not active.** There is no analytics SDK or crash-reporting SDK in the build. The
-adapters exist as console-only placeholders and are inert.
-
-If those are switched on later, the intended rule — already written into the
-analytics adapter's source comments and enforced in review — is that answer text,
-private conversation content, and display names are never sent as event
-properties. Only structural events (a game started, a round completed) would be
-sent.
+The code does not write answer text to PostgreSQL, to server logs, to crash
+reports, or to any third party, and does not use it for training. It is shown
+only to the other players in the same room, at the reveal. The fact that a
+player submitted something in a given position is recorded, so the room can
+synchronise; the content is not.
 
 ---
 
-## 5. Who we share data with
+## 4. Third parties
 
-| Recipient | What they get | Why |
+| Recipient | What it would get | Status in this repository |
 | --- | --- | --- |
-| Apple / Google | everything about your purchase | we are not involved; payment goes store-to-store |
-| RevenueCat | your device identifier and purchase status | to verify and deliver your subscription |
-| Our hosting provider | everything described above | they run the servers |
-| Our ad / analytics providers | **nothing — none are in use** | — |
+| RevenueCat | device identifier, purchase status | adapter present, never configured |
+| Apple or Google | payment details | never used, no store build exists |
+| Ad networks | nothing | no SDK, console-only stub |
+| Analytics and crash reporting | nothing | no SDK, console-only stubs |
 
-We do not sell personal information. We have not done so and will not.
+`src/lib/premium.ts` lazily loads `react-native-purchases` and
+`services/server/src/revenuecat.ts` verifies webhook signatures, but no
+products, API keys or webhook secrets were ever created. `src/lib/ads.ts`,
+`src/lib/analytics.ts` and `src/lib/sentry.ts` log to the console and do
+nothing else. No advertising identifier is read.
 
-We do not share your answers, your display name, or your gameplay history with
-anyone for advertising or marketing purposes.
+The copy that once described a between-games ad placement described a plan,
+not an implementation. That plan was dropped.
 
 ---
 
-## 6. How long we keep things
+## 5. Retention
 
 | Data | Retention |
 | --- | --- |
-| Encrypted answers in cache | deleted at game end, hard expiry 2 hours |
-| Your answers in the database | **never stored** |
-| Device identifier, display name, purchase status | for as long as your account exists |
-| Room and game history (which questions, reactions, timestamps) | **90 days**, then deleted automatically |
-| Store webhook delivery records | 365 days |
-| Server logs | rotated; contain no answers |
+| Encrypted answers in Redis | deleted at game end, hard expiry 2 hours |
+| Answers in PostgreSQL | never stored |
+| Device identifier, display name, entitlement rows | no automatic deletion |
+| Room and game history | 90 days |
+| Webhook delivery records | 365 days |
 
-The 90-day and 365-day windows are enforced by a scheduled sweep in the server
-(`services/server/src/retention.ts`), not by good intentions. It runs every six
-hours, deletes expired rooms, games, player lists, question orders, reactions and
-webhook records, and is covered by the integration test suite.
+`services/server/src/retention.ts` runs a sweep every six hours and deletes
+expired rooms, games, player lists, question orders, reactions and webhook
+records. It never deletes users, profiles, entitlements or purchases.
 
-The sweep **never** deletes your account, your display name, your premium
-entitlement, or your purchase history. Retention housekeeping has no business
-destroying billing records; if you want those gone, that is an erasure request
-(see below), not a sweep.
+No hosted deployment exists, so no sweep is running anywhere today.
 
 ---
 
-## 7. Your rights
+## 6. If you self-host
 
-Depending on where you live (GDPR / UK GDPR, the California CCPA/CPRA, and similar
-laws), you may have the right to:
+You become the data controller. At minimum:
 
-- **access** the personal data we hold about you;
-- **correct** it — you can change your display name in the app;
-- **delete** it;
-- **restrict** or **object** to processing;
-- **port** it to another provider;
-- **withdraw consent**, where processing relies on consent;
-- **complain** to your local data protection authority.
+- Set `LIVE_STATE_SECRET`, and keep it out of version control. The server will
+  refuse to cache answers without it.
+- Terminate TLS in front of the server. A development server without TLS is not
+  a deployment.
+- Decide how you will handle access and erasure requests. The client has no
+  account and no "delete my server data" control, so there is no way for a
+  player to identify themselves to you.
+- Write your own privacy notice and your own terms for your own deployment.
+  This file describes the code, not your service.
+- Decide whether the game is appropriate for younger players. The After Dark
+  deck is age gated in the client; nothing here is a COPPA compliance claim.
 
-Note that we do not rely on consent as our legal basis for the core service: the
-game cannot be played without a device identifier, and the identifier is random
-and carries no meaning outside your own install. Consent is relevant only to
-advertising and analytics, neither of which is active.
-
-### How to actually get your data
-
-DEEPER has no account, no email address, and no in-app "delete my data" button, so
-we cannot look you up from an email. To exercise any of these rights, contact us
-from the **same device**, describing your DEEPER display name and roughly when you
-last played, and we will identify and delete the matching record. We will respond
-within 30 days.
-
-Installing or deleting the app removes the local device identifier from your phone.
-Because that identifier is the only thing linking our server-side record to your
-install, **deleting the app makes you effectively unidentifiable to us**, though we
-do not automatically treat that as a deletion request.
+Uninstalling the app removes the local identifier, which is the only link to
+the server-side row. The server does not treat that as an erasure request.
 
 ---
 
-## 8. Security
+## 7. Known gaps, stated plainly
 
-- Answers held centrally are encrypted with **AES-256-GCM** under a scrypt-derived
-  key held only in server environment variables.
-- Store webhook deliveries are verified by **HMAC-SHA256** over the raw request body
-  with constant-time comparison, and rejected if the timestamp is more than 5
-  minutes old.
-- In production this traffic must be TLS. A development server without TLS is not an
-  acceptable deployment.
+- The ten-game hosting allowance is stored against a local identity and can be
+  reset by clearing local data. There is no server-side identity to prevent it.
+- There is no account deletion path and no support address.
+- There is no web client. Every player needs the native app, and the invite is
+  a `deeper://` custom-scheme link that only resolves where the app is present.
+- The RevenueCat webhook is implemented but was never connected to a real
+  account, so the entitlement path was never exercised with live purchases.
 
-No system is perfect. If you discover a vulnerability, please tell us privately
-rather than publicly.
-
----
-
-## 9. Children
-
-DEEPER is intended for adults and is **not directed at children under 13**. One
-deck ("After Dark") is age-gated behind an explicit 18+ confirmation because of its
-content.
-
-We do not knowingly collect information from children. If you believe a child has
-used DEEPER, contact us and we will delete the record.
-
-DEEPER is not currently certified as COPPA-compliant and we do not claim to be.
-Deciding whether to add a kids mode or to formally restrict the service is an open
-product question, not a settled one, and we would rather say so than imply a
-compliance posture we do not have.
+These are reasons the project was not launched, not claims that it handles
+them. See the [postmortem](https://github.com/thesaveddev/deeper/blob/main/docs/POSTMORTEM.md)
+and the [viability assessment](https://github.com/thesaveddev/deeper/blob/main/docs/viability-assessment-2026-11-05.md).
 
 ---
 
-## 10. Changes to this policy
+## 8. Changes and contact
 
-If we change what we collect or what we do with it, we will update this file in the
-DEEPER repository and the "last updated" date above, and — for material changes —
-tell you in the app before the change takes effect.
+This file is version-controlled alongside the code it describes. No one is
+maintaining it. If you fork the project, rewrite it to describe your own
+deployment.
 
----
-
-## 11. Contact
-
-Opeyemi Olorunfemi — [address removed]
-Source: <https://github.com/thesaveddev/deeper> (this policy is version-controlled
-alongside the code it describes)
+There is no support address and no security contact for the original project.
+Issues opened on the repository are not triaged and pull requests are not
+merged; see [CONTRIBUTING.md](https://github.com/thesaveddev/deeper/blob/main/CONTRIBUTING.md).

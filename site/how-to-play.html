@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How to play — DEEPER</title>
-<meta name="description" content="The whole DEEPER loop in six steps: create a room, share the code, answer in private, reveal together, react, repeat. Both game modes, every rule the app enforces, and what happens when a connection drops.">
+<meta name="description" content="The whole DEEPER loop in six steps: create a room, share the code, answer in private, reveal together, react, repeat. Both game modes, every rule the code enforces, and what happens when a connection drops.">
 <meta name="theme-color" content="#0D0D12">
 <meta property="og:title" content="How to play — DEEPER">
-<meta property="og:description" content="Six steps from a room code to a scoreboard. Every rule the app actually enforces.">
+<meta property="og:description" content="Six steps from a room code to a scoreboard. Every rule the source actually enforces.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Schibsted+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -24,27 +24,28 @@
 <meta property="og:image:alt" content="How to play: four steps, then you are deeper than you were.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="How to play — DEEPER">
-<meta name="twitter:description" content="The whole DEEPER loop in six steps: create a room, share the code, answer in private, reveal together, react, repeat. Both game modes, every rule the app enforces, and what happens when a connection drops.">
+<meta name="twitter:description" content="The whole DEEPER loop in six steps: create a room, share the code, answer in private, reveal together, react, repeat. Both game modes, every rule the code enforces, and what happens when a connection drops.">
 <meta name="twitter:image" content="https://example.invalid/assets/og/how-to-play.png">
 <meta name="twitter:image:alt" content="How to play: four steps, then you are deeper than you were.">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
+  "@type": "SoftwareSourceCode",
   "name": "DEEPER",
   "alternateName": "DEEPER. Better questions. Better conversations.",
   "url": "https://example.invalid/how-to-play.html",
-  "description": "The whole DEEPER loop in six steps: create a room, share the code, answer in private, reveal together, react, repeat. Both game modes, every rule the app enforces, and what happens when a connection drops.",
-  "applicationCategory": "GameApplication",
-  "operatingSystem": "iOS, Android",
+  "description": "The whole DEEPER loop in six steps: create a room, share the code, answer in private, reveal together, react, repeat. Both game modes, every rule the code enforces, and what happens when a connection drops.",
+  "codeRepository": "https://github.com/thesaveddev/deeper",
+  "license": "https://github.com/thesaveddev/deeper/blob/main/LICENSE",
+  "programmingLanguage": [
+    "TypeScript",
+    "JavaScript"
+  ],
+  "runtimePlatform": "Expo / React Native, Node.js",
   "softwareVersion": "0.1.0",
   "inLanguage": "en",
   "image": "https://example.invalid/assets/og/how-to-play.png",
-  "isAccessibleForFree": true,
-  "offers": {
-    "@type": "Offer",
-    "availability": "https://schema.org/InStock"
-  }
+  "isAccessibleForFree": true
 }
 </script>
 <!-- /seo:head -->
@@ -76,7 +77,7 @@
       <a href="./privacy-policy.html">Privacy</a>
     </div>
     <span class="nav__slot"></span>
-    <a class="btn" href="#get-it">Get the app</a>
+    <a class="btn" href="https://github.com/thesaveddev/deeper">View on GitHub</a>
     <details class="nav__toggle">
       <summary class="btn btn--ghost" aria-label="Open menu">Menu</summary>
       <div class="nav__menu">
@@ -118,7 +119,7 @@
     <div class="glow glow--violet" aria-hidden="true"></div>
     <div class="shell pagehead__inner">
       <h1>From a room code to a scoreboard in about fifteen minutes.</h1>
-      <p>One question lands on every phone at once. Everyone answers it alone. Then a shared countdown opens every sealed answer at the same second. That is the entire game, and everything below is detail.</p>
+      <p>One question lands on every phone at once. Everyone answers it alone. Then a shared countdown opens every sealed answer at the same second. That is the entire game. This page documents the code that implements it, not a service you can join.</p>
     </div>
   </section>
 
@@ -138,8 +139,8 @@
           <dd>Every phone has to reach the game server, because the server is what makes the reveal simultaneous. Phones do not talk to each other.</dd>
         </div>
         <div>
-          <dt>An invite link, if the app is there</dt>
-          <dd>The link is a <code>deeper://</code> URL, so it opens DEEPER straight into the lobby on a phone that already has it. It saves typing the code. It does not save installing the app, because there is no browser version to fall back to.</dd>
+          <dt>A native client on every phone</dt>
+          <dd>The invite is a <code>deeper://</code> URL, which opens the lobby on a device where the app is already present. It saves typing the code. Every player needs the app, because <code>app.json</code> defines no web target and there is no browser fallback.</dd>
         </div>
       </dl>
     </div>
@@ -243,7 +244,7 @@
     <div class="shell">
       <div class="head">
         <h2>Every deck is standard. One of them is a game instead.</h2>
-        <p class="lede mt-sm measure-tight">The deck you pick decides which of these you get. You cannot mix them inside a room, because prediction changes what the screen is asking for.</p>
+        <p class="lede mt-sm measure-tight">The deck you pick decides which of these you get. You cannot mix them inside a room, because prediction changes what the screen is asking for. The scored mode is tied to a two-player deck, so groups of three or more never get it.</p>
 
       </div>
 
@@ -308,8 +309,8 @@
   <section class="section">
     <div class="shell">
       <div class="head">
-        <h2>What the app actually enforces.</h2>
-        <p class="lede mt-sm measure-tight">These are not suggestions. Each one is checked by the server, and the game refuses to start rather than bending them.</p>
+        <h2>What the code actually enforces.</h2>
+        <p class="lede mt-sm measure-tight">These are not suggestions. Each one is checked by the server in the source, and the game refuses to start rather than bending them.</p>
 
       </div>
 
@@ -336,16 +337,16 @@
             <td>The host, and only the host. A room with one person in it will refuse to start.</td>
           </tr>
           <tr>
-            <th scope="row">Who is charged</th>
-            <td>Only the host, and only once per room. Creating a room is free, and a reconnect or a reload never charges a second time. Guests are never charged for anything.</td>
+            <th scope="row">Hosting credit</th>
+            <td>The host spends one of ten local credits per room. <code>credit_consumption_key</code> stops a reconnect charging the same room twice. Clearing local data resets the counter, which is a known limitation.</td>
           </tr>
           <tr>
-            <th scope="row">Free allowance</th>
-            <td>Ten hosted games per account to start with. When they run out you can still join other people's rooms, or unlock DEEPER+.</td>
+            <th scope="row">Deck gating</th>
+            <td>Five decks are unlocked. First Date, Midnight Conversations and After Dark check an entitlement that no store was ever configured to grant.</td>
           </tr>
           <tr>
-            <th scope="row">Decks</th>
-            <td>Five are free. First Date, Midnight Conversations, and After Dark need DEEPER+, and the server refuses the room rather than quietly serving a free deck.</td>
+            <th scope="row">Question pool</th>
+            <td>Ten per game, drawn from 100 IDs per deck. Those IDs are 20 prompts times five suffix variants, so the same base prompt can recur.</td>
           </tr>
           <tr>
             <th scope="row">After Dark</th>
@@ -361,7 +362,7 @@
           </tr>
           <tr>
             <th scope="row">Ads</th>
-            <td>One short break between games, shown to free hosts only. Never during a question, never during a reveal, never to guests, and never to DEEPER+.</td>
+            <td>None. <code>src/lib/ads.ts</code> is a console-only stub and no advertising SDK is wired up.</td>
           </tr>
           <tr>
             <th scope="row">Your answers</th>
@@ -389,24 +390,23 @@
         </div>
       </div>
       <div class="callout mt-md">
-        <strong>It is not in the stores yet</strong>
-        <p>There is no App Store or Google Play link to follow, because there is no submitted build. Everything on this site describes the shipping app's behaviour, not a demo of it.</p>
+        <strong>Nothing here is running</strong>
+        <p>DEEPER was finished and never launched. There is no submitted build, no hosted server and no store listing. Everything on this page describes what the code does when you build and run it yourself.</p>
       </div>
     </div>
   </section>
 
-  <section class="section" id="get-it">
+  <section class="section" id="source">
     <div class="shell">
       <div class="cta">
         <div class="glow glow--ember" aria-hidden="true"></div>
-        <h2>Try it on two phones tonight.</h2>
-        <p>Ten questions, one shared reveal, and an answer nobody in the room gets to see first.</p>
+        <h2>Take the source and run your own.</h2>
+        <p>Ten questions, one shared reveal, and an answer nobody in the room gets to see first. All of it in the repository under MIT.</p>
         <div class="cta__actions">
-          <span class="btn is-disabled" aria-disabled="true" title="Available once the app ships">App Store</span>
-          <span class="btn is-disabled" aria-disabled="true" title="Available once the app ships">Google Play</span>
+          <a class="btn" href="https://github.com/thesaveddev/deeper">View on GitHub</a>
           <a class="btn btn--ghost" href="./decks.html">Choose a deck</a>
         </div>
-        <p class="hero__note">Not in the stores yet.</p>
+        <p class="hero__note">Never launched. Open source under MIT.</p>
       </div>
     </div>
   </section>
@@ -423,7 +423,7 @@
       <a href="./faq.html">Questions</a>
       <a href="./privacy-policy.html">Privacy</a>
     </nav>
-    <p class="foot__legal">A game for people who would rather ask than guess. Made for iOS and Android.</p>
+    <p class="foot__legal">A game for people who would rather ask than guess. Open source, never launched, not maintained.</p>
   </div>
 </footer>
 

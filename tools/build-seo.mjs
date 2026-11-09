@@ -5,27 +5,27 @@
  * apart:
  *
  *   - <link rel="canonical">, og:url, og:site_name, twitter:* and the
- *     SoftwareApplication JSON-LD block, injected into every page head between
+ *     SoftwareSourceCode JSON-LD block, injected into every page head between
  *     markers, so re-running is idempotent.
  *   - sitemap.xml
  *   - robots.txt
  *
  * WHAT IS DELIBERATELY ABSENT, and why. This site is built on the rule that no
- * page may claim something the code does not do, and the audit enforces it
- * (gates 46 honest copy, and no web-client claim). Structured data is the easiest
- * place to smuggle a lie past a human reviewer, because it is machine-shaped and
- * nobody reads it, so every field below has to be traceable:
+ * page may claim something the repository does not contain, and the audit
+ * enforces it (gates 46 honest copy, no launch-era claims, no web-client claim).
+ * Structured data is the easiest place to smuggle a lie past a human reviewer,
+ * because it is machine-shaped and nobody reads it, so every field below has to
+ * be traceable:
  *
- *   - No "price". The FAQ states prices come from the store, and no store
- *     listing exists yet, so there is no number this file could print that would
- *     not be invented. The offers block is emitted with no price, which is
- *     schema.org-valid (price is not required for the type to parse) and honest.
- *   - No store URLs in installUrl/downloadUrl. The stores are not published. The
- *     site links its own get-the-app section instead.
- *   - No aggregateRating or review. Nothing has been reviewed anywhere. This is
- *     the single most common structured-data lie and the gate below rejects it.
- *   - No featureList entry that the README, the app screens or the decks page do
- *     not already state.
+ *   - No applicationCategory, operatingSystem, offers, availability, price or
+ *     downloadUrl. Those describe a shipped app in a store. DEEPER was never
+ *     launched, has no store listing and has nothing to download.
+ *   - No aggregateRating or review. Nothing has been reviewed anywhere.
+ *   - The @type is SoftwareSourceCode, not SoftwareApplication. What is being
+ *     published is a repository, so codeRepository and license are the honest
+ *     identifying fields and the audit now requires both.
+ *   - No featureList entry that the README, the source or the decks page do not
+ *     already state.
  *
  * Adding a page means adding a row to PAGES and re-running. The audit fails if a
  * page is missing from the sitemap, so the table cannot quietly fall behind.
@@ -51,6 +51,8 @@ const write = (p, s) => {
  * with this value, so the five copies cannot drift.
  */
 const ORIGIN = 'https://example.invalid';
+/** Where the source actually lives. Used by the JSON-LD, never by a CTA. */
+const REPO = 'https://github.com/thesaveddev/deeper';
 
 const app = JSON.parse(read('app.json')).expo;
 
@@ -61,62 +63,67 @@ const app = JSON.parse(read('app.json')).expo;
  * every deploy tells crawlers every page changed every deploy, which is a lie
  * they can measure, and it trains them to ignore the field. These are the dates
  * the content actually last changed.
+ *
+ * changefreq is yearly across the board. The project is closed and explicitly
+ * unmaintained; promising weekly or monthly updates to a crawler would be the
+ * same kind of quiet fiction the rest of the site refuses to make.
  */
+const RELEASED = '2026-11-09';
 const PAGES = [
   {
     file: 'index.html',
     loc: '/',
-    lastmod: '2026-09-26',
-    changefreq: 'weekly',
+    lastmod: RELEASED,
+    changefreq: 'yearly',
     priority: '1.0',
     name: 'DEEPER. Better questions. Better conversations.',
     description:
-      'A real-time party game for two to eight people. Everyone answers the same question in private, then everyone reveals at the same moment. Eight decks, 800 questions, a four character room code.',
+      'An open source, never-launched multiplayer conversation game. Expo and React Native client, an authoritative Socket.IO server, Postgres and Redis. Released under MIT with a written postmortem.',
     imageAlt: 'DEEPER. Better questions. Better conversations.',
   },
   {
     file: 'how-to-play.html',
     loc: '/how-to-play.html',
-    lastmod: '2026-09-26',
-    changefreq: 'monthly',
+    lastmod: RELEASED,
+    changefreq: 'yearly',
     priority: '0.8',
     name: 'How to play — DEEPER',
     description:
-      'The whole DEEPER loop in six steps: create a room, share the code, answer in private, reveal together, react, repeat. Both game modes, every rule the app enforces, and what happens when a connection drops.',
+      'The whole DEEPER loop in six steps: create a room, share the code, answer in private, reveal together, react, repeat. Both game modes, every rule the code enforces, and what happens when a connection drops.',
     imageAlt: 'How to play: four steps, then you are deeper than you were.',
   },
   {
     file: 'decks.html',
     loc: '/decks.html',
-    lastmod: '2026-09-26',
-    changefreq: 'monthly',
+    lastmod: RELEASED,
+    changefreq: 'yearly',
     priority: '0.8',
     name: 'The eight decks — DEEPER',
     description:
-      'All eight DEEPER decks with real sample questions: Couples, Deep Conversations, How Well Do You Know Me, Funny and Random, Friends, First Date, Midnight Conversations, and After Dark.',
-    imageAlt: 'The catalogue: eight decks, and every question written out.',
+      'All eight DEEPER decks with real sample questions: 20 hand-written prompts each, expanded into 100 IDs by five suffix variants. All of it in the repository.',
+    imageAlt: 'The catalogue: eight decks, and every base prompt written out.',
   },
   {
     file: 'faq.html',
     loc: '/faq.html',
-    lastmod: '2026-09-26',
-    changefreq: 'monthly',
+    lastmod: RELEASED,
+    changefreq: 'yearly',
     priority: '0.6',
     name: 'Questions — DEEPER',
     description:
-      'Straight answers about DEEPER: what it costs, who gets charged, what happens to your answers, whether it works without wifi, and what it does with your data.',
-    imageAlt: 'Straight answers: what it costs, and what happens to your answers.',
+      'Straight answers about DEEPER: why it was never launched, what the code does, what it stores, and what you can do with the source.',
+    imageAlt: 'Straight answers: why it stopped, and what the code does.',
   },
   {
     file: 'privacy-policy.html',
     loc: '/privacy-policy.html',
-    lastmod: '2026-09-26',
+    lastmod: RELEASED,
     changefreq: 'yearly',
     priority: '0.3',
-    name: 'Privacy Policy: DEEPER',
+    name: 'Data handling: DEEPER',
     description:
-      'What DEEPER stores, for how long, and why. What never leaves your device, what is encrypted, and what is deleted when a game ends.',
-    imageAlt: 'Privacy: what we keep, for how long, and why.',
+      'What the DEEPER code stores, for how long, and why. No service is operated; this describes a self-hosted deployment.',
+    imageAlt: 'Data handling: what the code keeps, for how long, and why.',
   },
 ];
 
@@ -154,34 +161,33 @@ const NO_FLASH = `<script>
 </script>`;
 
 /**
- * The SoftwareApplication block.
+ * The SoftwareSourceCode block.
  *
- * operatingSystem is the honest answer for an Expo app that has never been
- * submitted: it is built for both, which is true regardless of whether either
- * store has accepted it. softwareVersion is read from app.json rather than
- * typed here, so it cannot rot.
+ * DEEPER was never submitted to a store, so describing it as a
+ * SoftwareApplication would assert an installable product that does not exist.
+ * What is published is a repository under MIT, and codeRepository plus license
+ * are the fields that identify it. softwareVersion is read from app.json rather
+ * than typed here, so it cannot rot.
+ *
+ * Deliberately no offers block: there is no price, no availability and nothing
+ * to buy. The audit rejects those fields outright now.
  */
 function jsonLd(page) {
   return {
     '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
+    '@type': 'SoftwareSourceCode',
     name: 'DEEPER',
     alternateName: 'DEEPER. Better questions. Better conversations.',
     url: ORIGIN + page.loc,
     description: page.description,
-    applicationCategory: 'GameApplication',
-    operatingSystem: 'iOS, Android',
+    codeRepository: REPO,
+    license: `${REPO}/blob/main/LICENSE`,
+    programmingLanguage: ['TypeScript', 'JavaScript'],
+    runtimePlatform: 'Expo / React Native, Node.js',
     softwareVersion: app.version,
     inLanguage: 'en',
     image: `${ORIGIN}/assets/og/${page.file.replace(/\.html$/, '')}.png`,
-    // Free to install and play. The paid part is a one-off in-app unlock, which
-    // is deliberately not represented here: no store means no price, and the
-    // FAQ already tells the reader that the till is the real price.
     isAccessibleForFree: true,
-    offers: {
-      '@type': 'Offer',
-      availability: 'https://schema.org/InStock',
-    },
   };
 }
 
@@ -336,17 +342,16 @@ const sitemapBytes = write('site/sitemap.xml', xml);
 // --- robots -----------------------------------------------------------------
 
 /**
- * Nothing is disallowed. The pages are the marketing surface, there is no
- * user-specific area, and the answers that matter live in Redis under a 2h TTL
- * and were never on this origin at all. The one thing that must not be indexed
- * is the preview scaffolding that lives next to the site during design work.
+ * Nothing is disallowed. These five pages are static documentation of a
+ * repository, and there is no service, account area or user data on this
+ * origin. The one thing that must not be indexed is the preview scaffolding
+ * that lives next to the site during design work.
  */
 const robots = [
   '# Generated by tools/build-seo.mjs.',
   '#',
-  '# Everything here is the public marketing surface and is meant to be found.',
-  '# There is no account area, no dashboard and no user data on this origin:',
-  '# answers are encrypted in Redis under a two hour TTL and deleted at game end.',
+  '# Everything here is static documentation and is meant to be found.',
+  '# No service runs on this origin: no accounts, no dashboard, no user data.',
   '',
   'User-agent: *',
   'Allow: /',
@@ -364,4 +369,5 @@ console.log(`origin    ${ORIGIN}`);
 console.log(`injected  ${injected} page head(s) (${PAGES.map((p) => p.file).join(', ')})`);
 console.log(`sitemap   site/sitemap.xml (${sitemapBytes} bytes, newest lastmod ${today})`);
 console.log(`robots    site/robots.txt (${robotsBytes} bytes)`);
-console.log('omitted   price, store URLs, aggregateRating, review: no store listing exists to source them from');
+console.log('omitted   offers, price, availability, store URLs, aggregateRating, review: no store listing exists');
+console.log('json-ld   SoftwareSourceCode, with codeRepository and license');

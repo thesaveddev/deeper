@@ -15,6 +15,9 @@ import { contrast } from './contrast-math.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+/** The repository the site now points at. Declared once, used by several gates. */
+const REPO = 'https://github.com/thesaveddev/deeper';
+const ORIGIN = 'https://example.invalid';
 
 const css = read('site/styles.css');
 const tokens = read('site/tokens.css');
@@ -303,13 +306,57 @@ const enCount = (copyText.match(/–/g) ?? []).length;
 check('em-dash ban', emCount === 0 && enCount === 0, `${emCount} em-dash, ${enCount} en-dash in visible copy`);
 
 // --- CTA intent consistency -------------------------------------------------
-// The mobile menu toggle is a <summary>, and the store buttons are disabled
-// placeholders. Neither is a call to action, so neither counts toward the set
-// of verbs the reader is actually being asked to act on.
+// The mobile menu toggle is a <summary>, not a call to action, so it does not
+// count toward the set of verbs the reader is actually being asked to act on.
+// There is one external action on this site now: go to the repository.
 const ctaLabels = PAGES.flatMap((name) =>
   [...pageHtml[name].matchAll(/<a class="btn[^"]*"[^>]*>([^<]+)</g)].map((m) => m[1].trim()),
 );
 check('cta intent', new Set(ctaLabels).size <= 3, `labels: ${[...new Set(ctaLabels)].join(' | ')}`);
+
+// --- the open-source release is stated, not implied -------------------------
+// Every hand-written page has to say what this is. A reader landing on decks.html
+// from a search result should not be able to mistake a code walkthrough for a
+// product they can install.
+const statusMissing = PAGES.filter((name) => !pageText[name].includes('Never launched. Open source under MIT.'));
+check('open source status on every page', statusMissing.length === 0,
+  statusMissing.length ? `status line missing on: ${statusMissing.join(', ')}` : `all ${PAGES.length} hand-written pages state the status`);
+
+// --- no launch-era claims in visible copy -----------------------------------
+// The rewrite was manual, and copy drifts. These are the phrases that would
+// quietly turn a repository back into a product launch: a premium tier, a store
+// listing, a price, an ad break, a free-game allowance sold as a benefit, or a
+// call to try it tonight. This is coupled to the same evidence as the rest of
+// the site: every one of them is false while the repo has no store build.
+const LAUNCH_CLAIMS = [
+  ['premium product name', /\bDEEPER\+/i],
+  ['store listing', /App Store|Google Play|in the stores/i],
+  ['store pricing', /prices? come from the store|one-off unlock/i],
+  ['paywall copy', /free games? to host|ten free games|free hosts? only/i],
+  ['ad-break claim', /ad break|between-games ad/i],
+  ['call to try it', /try it on two phones tonight|still want to try it/i],
+  ['store CTA', /get the app|download the app/i],
+  ['inflated question count', /eight hundred questions|800 questions\b/i],
+  ['shipping-app framing', /shipping (?:app|catalogue)|the app does today/i],
+];
+const launchHits = LAUNCH_CLAIMS
+  .filter(([, re]) => re.test(copyText))
+  .map(([name, re]) => `${name} (${copyText.match(re)?.[0]})`);
+check('no launch-era claims', launchHits.length === 0,
+  launchHits.length ? `still reads as a launch: ${launchHits.join('; ')}` : 'no store, price, premium tier, ad break or try-it-tonight copy');
+
+// --- every external CTA resolves to the repository --------------------------
+// The disabled store placeholders are gone. A dead external link on a public
+// site is worse than no link, so any absolute CTA href must be the repo URL.
+const ctaHrefProblems = [];
+for (const name of PAGES) {
+  for (const m of pageHtml[name].matchAll(/<a class="btn[^"]*"[^>]*href="(https?:\/\/[^"]+)"/g)) {
+    if (m[1] !== REPO) ctaHrefProblems.push(`${name}: ${m[1]}`);
+  }
+  if (/class="btn[^"]*is-disabled/.test(pageHtml[name])) ctaHrefProblems.push(`${name}: disabled store placeholder remains`);
+}
+check('external CTA points at the source', ctaHrefProblems.length === 0,
+  ctaHrefProblems.length ? ctaHrefProblems.join('; ') : `every external button href is ${REPO}, no disabled placeholders`);
 
 // --- dead links -------------------------------------------------------------
 const allPages = [...PAGES, ...GENERATED];
@@ -339,16 +386,17 @@ check('shared shell', shellProblems.length === 0,
 // robots.txt and each page's canonical/OG/JSON-LD block, and these check the
 // result rather than trusting the writer.
 //
-// The interesting one is 52. Structured data is where a marketing site most
+// The interesting one is 52. Structured data is where a documentation site most
 // easily starts asserting things that are not true, because it is machine
-// shaped and nobody reads it before shipping. A rating block, a price, or a
-// Play Store URL are all trivially plausible and all currently false: there is
-// no store listing, so there is nothing to quote a price from and nothing to
-// have been reviewed. So those fields are forbidden outright, and the gate is
-// coupled to the same evidence the rest of the site is: app.json. When a store
-// listing and a real price exist, the gate is deleted in the same commit that
-// adds them, and the reviewer sees that deletion.
-const ORIGIN = 'https://example.invalid';
+// shaped and nobody reads it before publishing. A rating block, a price, an
+// offers block or a Play Store URL are all trivially plausible and all false:
+// DEEPER was never launched, so there is no listing, no price and nothing to
+// have been reviewed. Those fields are forbidden outright.
+//
+// The project is now published as source rather than as an app. So the JSON-LD
+// must describe source (SoftwareSourceCode with codeRepository and license),
+// and the visible copy must not drift back into launch marketing. Both are
+// checked here rather than trusted to a one-time rewrite.
 const sitemap = read('site/sitemap.xml');
 const robots = read('site/robots.txt');
 const allFiles = [...PAGES, ...GENERATED].map((n) => `${n}.html`);
@@ -392,7 +440,9 @@ for (const f of allFiles) {
 check('canonical per page', canonProblems.length === 0,
   canonProblems.length ? canonProblems.join('; ') : `one canonical per page, all agreeing with the sitemap`);
 
-// The JSON-LD has to parse, and it has to be SoftwareApplication on every page.
+// The JSON-LD has to parse, and it has to describe SOURCE, not a store app.
+// codeRepository and license are required because they are the only honest
+// identifying fields for something that was never submitted anywhere.
 const ldProblems = [];
 for (const f of allFiles) {
   const src = read(`site/${f}`);
@@ -400,17 +450,21 @@ for (const f of allFiles) {
   if (blocks.length !== 1) { ldProblems.push(`${f}: ${blocks.length} ld+json block(s)`); continue; }
   try {
     const data = JSON.parse(blocks[0]);
-    if (data['@type'] !== 'SoftwareApplication') ldProblems.push(`${f}: @type is ${data['@type']}`);
+    if (data['@type'] !== 'SoftwareSourceCode') ldProblems.push(`${f}: @type is ${data['@type']}`);
     if (data['@context'] !== 'https://schema.org') ldProblems.push(`${f}: bad @context`);
+    if (data.codeRepository !== REPO) ldProblems.push(`${f}: codeRepository is ${data.codeRepository}`);
+    if (typeof data.license !== 'string' || !data.license.startsWith(REPO)) ldProblems.push(`${f}: license is ${data.license}`);
   } catch (err) {
     ldProblems.push(`${f}: does not parse (${err.message})`);
   }
 }
 check('json-ld valid', ldProblems.length === 0,
-  ldProblems.length ? ldProblems.join('; ') : `SoftwareApplication parses on all ${allFiles.length} pages`);
+  ldProblems.length ? ldProblems.join('; ') : `SoftwareSourceCode with codeRepository and license on all ${allFiles.length} pages`);
 
 // The fabrication gate. See the note above: these fields are all false today
-// and are the standard way a site lies to a crawler.
+// and are the standard way a site lies to a crawler. offers, availability and
+// operatingSystem are new here because they describe a shipping app that does
+// not exist, not a repository that does.
 const ldAll = allFiles.map((f) => read(`site/${f}`)).join('\n');
 const ldJson = [...ldAll.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => m[1]).join('\n');
 const FORBIDDEN_LD = [
@@ -418,17 +472,18 @@ const FORBIDDEN_LD = [
   ['review', /"review"\s*:/],
   ['ratingValue', /"ratingValue"/],
   ['price', /"price"\s*:/],
+  ['offers', /"offers"\s*:/],
+  ['availability', /"availability"\s*:/],
+  ['operatingSystem', /"operatingSystem"\s*:/],
+  ['applicationCategory', /"applicationCategory"\s*:/],
   ['store url', /apps\.apple\.com|play\.google\.com/],
   ['downloadUrl', /"downloadUrl"\s*:/],
 ];
 const ldFabrications = FORBIDDEN_LD.filter(([, re]) => re.test(ldJson)).map(([name]) => name);
-// The store buttons on the page are disabled placeholders, so a store URL in
-// the page body would be a claim too. Only the JSON-LD is scanned here because
-// the visible copy already passes the cta intent gate.
 check('no fabricated structured data', ldFabrications.length === 0,
   ldFabrications.length
-    ? `asserts ${ldFabrications.join(', ')}, but app.json has no store listing to source them from`
-    : 'no price, rating, review or store URL: nothing asserted that a store listing cannot back');
+    ? `asserts ${ldFabrications.join(', ')}, but no store listing exists to source them from`
+    : 'no offer, price, rating, review or store URL: nothing asserted that the repository cannot back');
 
 // Exactly one og:image per page, and it has to be absolute. Two tags is worse
 // than one: a scraper reads the first og:image it finds, so a hand-written

@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DEEPER — Better questions. Better conversations.</title>
-<meta name="description" content="A real-time party game for two to eight people. Everyone answers the same question in private, then everyone reveals at the same moment. Eight decks, 800 questions, a four character room code.">
+<meta name="description" content="An open source, never-launched multiplayer conversation game. Expo and React Native client, an authoritative Socket.IO server, Postgres and Redis. Released under MIT with a written postmortem.">
 <meta name="theme-color" content="#0D0D12">
 <meta property="og:title" content="DEEPER. Better questions. Better conversations.">
-<meta property="og:description" content="Everyone answers in private. Everyone reveals together. Eight decks, 800 questions, two to eight players.">
+<meta property="og:description" content="Everyone answers in private. Everyone reveals together. An open source reference implementation, never launched.">
 <meta property="og:type" content="website">
-<!-- Fonts are linked, not self-hosted. Swap this for a self-hosted @font-face
-     before launch so the first paint is not a round trip to a third party. -->
+<!-- Fonts are linked, not self-hosted. Anyone deploying this site should swap
+     them for a self-hosted @font-face so first paint is not a third-party hop. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Schibsted+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -27,27 +27,28 @@
 <meta property="og:image:alt" content="DEEPER. Better questions. Better conversations.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="DEEPER. Better questions. Better conversations.">
-<meta name="twitter:description" content="A real-time party game for two to eight people. Everyone answers the same question in private, then everyone reveals at the same moment. Eight decks, 800 questions, a four character room code.">
+<meta name="twitter:description" content="An open source, never-launched multiplayer conversation game. Expo and React Native client, an authoritative Socket.IO server, Postgres and Redis. Released under MIT with a written postmortem.">
 <meta name="twitter:image" content="https://example.invalid/assets/og/index.png">
 <meta name="twitter:image:alt" content="DEEPER. Better questions. Better conversations.">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
+  "@type": "SoftwareSourceCode",
   "name": "DEEPER",
   "alternateName": "DEEPER. Better questions. Better conversations.",
   "url": "https://example.invalid/",
-  "description": "A real-time party game for two to eight people. Everyone answers the same question in private, then everyone reveals at the same moment. Eight decks, 800 questions, a four character room code.",
-  "applicationCategory": "GameApplication",
-  "operatingSystem": "iOS, Android",
+  "description": "An open source, never-launched multiplayer conversation game. Expo and React Native client, an authoritative Socket.IO server, Postgres and Redis. Released under MIT with a written postmortem.",
+  "codeRepository": "https://github.com/thesaveddev/deeper",
+  "license": "https://github.com/thesaveddev/deeper/blob/main/LICENSE",
+  "programmingLanguage": [
+    "TypeScript",
+    "JavaScript"
+  ],
+  "runtimePlatform": "Expo / React Native, Node.js",
   "softwareVersion": "0.1.0",
   "inLanguage": "en",
   "image": "https://example.invalid/assets/og/index.png",
-  "isAccessibleForFree": true,
-  "offers": {
-    "@type": "Offer",
-    "availability": "https://schema.org/InStock"
-  }
+  "isAccessibleForFree": true
 }
 </script>
 <!-- /seo:head -->
@@ -79,7 +80,7 @@
       <a href="./privacy-policy.html">Privacy</a>
     </div>
     <span class="nav__slot"></span>
-    <a class="btn" href="#get-it">Get the app</a>
+    <a class="btn" href="https://github.com/thesaveddev/deeper">View on GitHub</a>
     <details class="nav__toggle">
       <summary class="btn btn--ghost" aria-label="Open menu">Menu</summary>
       <div class="nav__menu">
@@ -124,15 +125,16 @@
     <div class="shell hero__grid">
       <div>
         <h1>Better questions. Better <span class="hl">conversations</span>.</h1>
-        <p class="hero__sub">Everyone answers the same question in private. Then, on the same count, everyone sees what everyone else said.</p>
+        <p class="hero__sub">Everyone answers the same question in private. Then, on the same count, everyone sees what everyone else said. This site documents the code that does it, not a service you can join.</p>
         <div class="hero__actions">
-          <a class="btn" href="#get-it">Get the app</a>
+          <a class="btn" href="https://github.com/thesaveddev/deeper">View on GitHub</a>
           <a class="btn btn--ghost" href="./how-to-play.html">How to play</a>
+          <a class="link-arrow" href="https://github.com/thesaveddev/deeper/blob/main/docs/POSTMORTEM.md">Why it stopped</a>
         </div>
-        <p class="hero__note">iOS and Android. Not in the stores yet.</p>
+        <p class="hero__note">Never launched. Expo, React Native, Socket.IO. Open source under MIT.</p>
       </div>
 
-      <!-- Illustration, not a screenshot. Every string is the shipping app's
+      <!-- Illustration, not a screenshot. Every string is the app's
            own copy, redrawn as HTML so it can be themed and scaled. -->
       <div class="stack" role="img" aria-label="Two phones in the same room. One player's answer is still sealed. The other has revealed, showing a room code and an answer from Ada.">
         <figure class="scene scene--back">
@@ -167,7 +169,7 @@
   </section>
 
   <!-- --------------------------------------------------------- samples -- -->
-  <!-- Six verbatim questions from the shipping catalogue, as a static ruled
+  <!-- Six verbatim questions from the catalogue, as a static ruled
        block. This used to be a 46 second auto-scrolling marquee, then a
        horizontal scroll region. Both were wrong: one demanded attention it had
        not earned and hid half its content at any moment, and the other needed a
@@ -177,8 +179,8 @@
   <section class="section section--tight samples" aria-labelledby="samples-title">
     <div class="shell">
       <div class="head head--wide">
-        <h2 id="samples-title">Six of the eight hundred, word for word.</h2>
-        <p>Every question in the catalogue is written to be answered in a sentence, and answered privately, before anyone sees what anyone else said.</p>
+        <h2 id="samples-title">Six base prompts, word for word.</h2>
+        <p>These are the hand-written prompts in <code>packages/content/src/index.ts</code>. The catalogue appends one of five suffix phrases to each of them, which is why the code holds 800 question IDs but only 160 distinct prompts.</p>
       </div>
       <ul class="samples__list">
         <li class="samples__item">What small thing do I do that makes you feel cared for?</li>
@@ -285,8 +287,8 @@
   <section class="section" id="decks">
     <div class="shell">
       <div class="head">
-        <h2>Eight decks. Eight hundred questions.</h2>
-        <p class="lede mt-sm measure-tight">Every deck holds 100 questions. Five are free, three come with DEEPER+. Two of them are for two people only, and one is age gated.</p>
+        <h2>Eight decks. One hundred and sixty base prompts.</h2>
+        <p class="lede mt-sm measure-tight">Each deck has 20 hand-written prompts, expanded into 100 question IDs by five mechanical suffixes. Five decks are unlocked in the code; three sit behind an entitlement check that was never connected to a store. Three decks are for two players only, and one is age gated.</p>
 
       </div>
 
@@ -298,7 +300,7 @@
             <li>What small thing do I do that makes you feel cared for?</li>
             <li>Which future tradition sounds most like us?</li>
           </ul>
-          <p class="deck__meta">100 questions · 2 players · free</p>
+          <p class="deck__meta">100 question IDs · 2 players · unlocked</p>
         </li>
         <li class="deck">
           <div class="deck__head"><svg class="deck__mark" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3Q13.44 10.56 21 12Q13.44 13.44 12 21Q10.56 13.44 3 12Q10.56 10.56 12 3Z"/></svg><span class="deck__name">Deep Conversations</span></div>
@@ -307,7 +309,7 @@
             <li>What part of yourself are you still learning to understand?</li>
             <li>What kind of courage are you practicing right now?</li>
           </ul>
-          <p class="deck__meta">100 questions · 2 to 8 players · free</p>
+          <p class="deck__meta">100 question IDs · 2 to 8 players · unlocked</p>
         </li>
         <li class="deck">
           <div class="deck__head"><svg class="deck__mark" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.25"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg><span class="deck__name">How Well Do You Know Me?</span></div>
@@ -316,7 +318,7 @@
             <li>What would I choose for a completely free afternoon?</li>
             <li>Which tiny inconvenience tests my patience?</li>
           </ul>
-          <p class="deck__meta">100 questions · 2 players · free</p>
+          <p class="deck__meta">100 question IDs · 2 players · unlocked</p>
         </li>
         <li class="deck">
           <div class="deck__head"><svg class="deck__mark" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M8.4 14.4a4.6 4.6 0 0 0 7.2 0"/><circle cx="9.2" cy="9.8" r="0.9" fill="currentColor" stroke="none"/><circle cx="14.8" cy="9.8" r="0.9" fill="currentColor" stroke="none"/></svg><span class="deck__name">Funny &amp; Random</span></div>
@@ -325,7 +327,7 @@
             <li>Which animal would be the worst roommate for me?</li>
             <li>What would I be arrested for in a cartoon universe?</li>
           </ul>
-          <p class="deck__meta">100 questions · 2 to 8 players · free</p>
+          <p class="deck__meta">100 question IDs · 2 to 8 players · unlocked</p>
         </li>
         <li class="deck">
           <div class="deck__head"><svg class="deck__mark" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="9.2" cy="12" r="6"/><circle cx="14.8" cy="12" r="6"/></svg><span class="deck__name">Friends</span></div>
@@ -334,7 +336,7 @@
             <li>Which shared memory still makes you laugh before you tell it?</li>
             <li>What is one way I make a room better?</li>
           </ul>
-          <p class="deck__meta">100 questions · 2 to 8 players · free</p>
+          <p class="deck__meta">100 question IDs · 2 to 8 players · unlocked</p>
         </li>
         <li class="deck">
           <div class="deck__head"><svg class="deck__mark" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 12Q15.444479999999999 7.216 12 7.216Q8.555520000000001 7.216 12 12Q17.614257230740634 13.797557848158583 16.549854373956016 10.521662698910252Q15.485451517171397 7.245767549661921 12 12Q12.025321790182572 17.894951846906125 14.81196464696719 15.870337301089748Q17.598607503751808 13.84572275527337 12 12Q6.4013924962481905 13.845722755273371 9.18803535303281 15.870337301089748Q11.974678209817428 17.894951846906125 12 12Q8.514548482828603 7.245767549661921 7.450145626043986 10.521662698910252Q6.385742769259368 13.797557848158583 12 12"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg><span class="deck__name">First Date</span></div>
@@ -343,7 +345,7 @@
             <li>What is a green flag you notice quickly?</li>
             <li>What is a question you wish dates asked more often?</li>
           </ul>
-          <p class="deck__meta">100 questions · 2 players · DEEPER+</p>
+          <p class="deck__meta">100 question IDs · 2 players · gated in code</p>
         </li>
         <li class="deck">
           <div class="deck__head"><svg class="deck__mark" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15.4 3.4a8.6 8.6 0 1 0 5.2 12.4A9.4 9.4 0 0 1 15.4 3.4Z"/></svg><span class="deck__name">Midnight Conversations</span></div>
@@ -352,7 +354,7 @@
             <li>What thought visits you when the world gets quiet?</li>
             <li>Which truth became easier after midnight?</li>
           </ul>
-          <p class="deck__meta">100 questions · 2 to 8 players · DEEPER+</p>
+          <p class="deck__meta">100 question IDs · 2 to 8 players · gated in code</p>
         </li>
         <li class="deck">
           <div class="deck__head"><svg class="deck__mark" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none"/></svg><span class="deck__name">After Dark</span><span class="deck__badge">18+</span></div>
@@ -361,7 +363,7 @@
             <li>What kind of chemistry do you notice first?</li>
             <li>What makes a private moment feel memorable?</li>
           </ul>
-          <p class="deck__meta">100 questions · 2 to 8 players · DEEPER+</p>
+          <p class="deck__meta">100 question IDs · 2 to 8 players · gated in code</p>
         </li>
       </ul>
 
@@ -394,8 +396,8 @@
     <div class="shell">
       <div class="privacy__grid">
         <div>
-          <h2 class="title-sm">Your answers are not our product.</h2>
-          <p class="lede mt-sm">We built a game about saying the thing you meant. Keeping a copy of what you said would undo it, so the architecture does not do it.</p>
+          <h2 class="title-sm">The code never keeps the answers.</h2>
+          <p class="lede mt-sm">The design rule was that keeping a copy of what someone said would undo the point of the game, so the schema has no answers table. These claims describe the source, not a running service.</p>
         </div>
         <dl class="claims">
           <div class="claim">
@@ -411,31 +413,27 @@
             <dd>The app generates a random string on your phone and uses it as an account handle. It reads no IDFA, no Android Advertising ID, no IMEI, no MAC address.</dd>
           </div>
           <div class="claim">
-            <dt>No third-party trackers in the app</dt>
-            <dd>One purchase SDK, for the store. No ad network, no analytics vendor, no crash reporter wired up.</dd>
+            <dt>No third-party trackers wired up</dt>
+            <dd>A purchase adapter exists, but no products, keys or webhook secrets were ever configured. The ad, analytics and crash-reporting modules log to the console and stop there.</dd>
           </div>
         </dl>
       </div>
-      <p class="mt-lg"><a class="link-arrow" href="./privacy-policy.html">Read the privacy policy in full</a></p>
+      <p class="mt-lg"><a class="link-arrow" href="./privacy-policy.html">Read the data handling notes in full</a></p>
     </div>
   </section>
 
   <!-- -------------------------------------------------------------- cta -- -->
-  <section class="section" id="get-it">
+  <section class="section" id="source">
     <div class="shell">
       <div class="cta">
         <div class="glow glow--ember" aria-hidden="true"></div>
-        <h2>Ten questions. Two phones. One honest conversation.</h2>
-        <p>Every new account starts with ten free games to host. Guests never pay, and joining somebody else's room is always free.</p>
+        <h2>Read the code. Read the decision.</h2>
+        <p>There is no hosted server and no store listing. The source, the market viability research and the postmortem are all in the repository, published under MIT.</p>
         <div class="cta__actions">
-          <!-- Store links. These are deliberately inert until the app has an
-               EAS project id and a submitted build; a dead external link on a
-               public site is worse than an honest placeholder. -->
-          <span class="btn is-disabled" aria-disabled="true" title="Available once the app ships">App Store</span>
-          <span class="btn is-disabled" aria-disabled="true" title="Available once the app ships">Google Play</span>
+          <a class="btn" href="https://github.com/thesaveddev/deeper">View on GitHub</a>
           <a class="btn btn--ghost" href="./how-to-play.html">How to play</a>
         </div>
-        <p class="hero__note">Not in the stores yet.</p>
+        <p class="hero__note">Never launched. Open source under MIT.</p>
       </div>
     </div>
   </section>
@@ -452,7 +450,7 @@
       <a href="./faq.html">Questions</a>
       <a href="./privacy-policy.html">Privacy</a>
     </nav>
-    <p class="foot__legal">A game for people who would rather ask than guess. Made for iOS and Android.</p>
+    <p class="foot__legal">A game for people who would rather ask than guess. Open source, never launched, not maintained.</p>
   </div>
 </footer>
 

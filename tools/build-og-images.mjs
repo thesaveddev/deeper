@@ -78,32 +78,32 @@ function findChrome() {
 const CARDS = [
   {
     file: 'index',
-    kicker: 'A party game for two to eight',
+    kicker: 'An open source codebase, never launched',
     heading: 'Better questions. Better conversations.',
-    foot: 'Eight decks. 800 questions. A four character room code.',
+    foot: 'Eight decks. 160 prompts. MIT with a written postmortem.',
   },
   {
     file: 'how-to-play',
-    kicker: 'How to play',
+    kicker: 'How the code works',
     heading: 'Four steps, then you are deeper than you were.',
     foot: 'Answer in private. Reveal at the same moment.',
   },
   {
     file: 'decks',
     kicker: 'The catalogue',
-    heading: 'Eight decks, and every question written out.',
-    foot: 'Five free. Three with DEEPER+.',
+    heading: 'Eight decks, and every base prompt written out.',
+    foot: '20 prompts per deck. Five suffix variants each.',
   },
   {
     file: 'faq',
     kicker: 'Straight answers',
-    heading: 'What it costs, and what happens to your answers.',
+    heading: 'Why it stopped, and what the code does.',
     foot: 'No invented answers. Read the real ones.',
   },
   {
     file: 'privacy-policy',
-    kicker: 'Privacy',
-    heading: 'What we keep, for how long, and why.',
+    kicker: 'Data handling',
+    heading: 'What the code keeps, for how long, and why.',
     foot: 'Answers are never written to the database.',
   },
 ];

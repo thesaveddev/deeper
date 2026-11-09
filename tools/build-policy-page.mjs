@@ -1,9 +1,13 @@
 /**
  * Renders docs/privacy-policy.md into site/privacy-policy.html.
  *
- * The markdown is the single source of truth: the repo links it, the store
- * listing needs a hosted URL, and the site needs a page. Maintaining three
- * copies of a legal document is how they drift out of agreement with the code.
+ * The markdown is the single source of truth: the repo links it, the README
+ * points at it, and the site needs a page. Maintaining three copies of a
+ * document about data handling is how they drift out of agreement with the code.
+ *
+ * Since DEEPER was never launched, docs/privacy-policy.md is not a policy for a
+ * service. It describes what the code does and what a self-hoster becomes
+ * responsible for. Keep that framing when editing it.
  *
  * This is a deliberately small markdown subset (headings, paragraphs, lists,
  * rules, bold, inline code, links). It is not a general converter and does not
@@ -30,9 +34,10 @@ const escapeHtml = (s) =>
 /**
  * Inline formatting. Bold and code only.
  *
- * Note the deliberately absent em-dash rule: the policy text is the product's
- * own copy and is not rewritten to satisfy a page-level style constraint. The
- * ban applies to marketing copy written for the page, not to a legal document.
+ * Note the deliberately absent em-dash rule: this text is the repository's own
+ * technical documentation and is not rewritten to satisfy a page-level style
+ * constraint. The ban applies to marketing copy written for the page, not to
+ * the document that describes the source.
  */
 function inline(text) {
   let out = escapeHtml(text);
@@ -163,12 +168,12 @@ const page = `<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Privacy Policy: DEEPER</title>
-<meta name="description" content="What DEEPER stores, what it never stores, and how long it keeps it." />
+<title>Data handling: DEEPER</title>
+<meta name="description" content="What the DEEPER code stores, for how long, and why. No service is operated; this describes a self-hosted deployment." />
 <meta name="robots" content="index, follow" />
 <meta name="theme-color" content="#0D0D12" />
-<meta property="og:title" content="Privacy Policy: DEEPER" />
-<meta property="og:description" content="What DEEPER stores, what it never stores, and how long it keeps it." />
+<meta property="og:title" content="Data handling: DEEPER" />
+<meta property="og:description" content="What the DEEPER code stores, for how long, and why. No service is operated; this describes a self-hosted deployment." />
 <meta property="og:image" content="./assets/icon.png" />
 <link rel="icon" href="./assets/favicon.png" sizes="48x48" />
 <link rel="apple-touch-icon" href="./assets/icon.png" />
@@ -195,7 +200,7 @@ const page = `<!doctype html>
       <a href="./privacy-policy.html" aria-current="page">Privacy</a>
     </div>
     <span class="nav__slot"></span>
-    <a class="btn" href="./index.html#get-it">Get the app</a>
+    <a class="btn" href="https://github.com/thesaveddev/deeper">View on GitHub</a>
     <details class="nav__toggle">
       <summary class="btn btn--ghost" aria-label="Open menu">Menu</summary>
       <div class="nav__menu">
@@ -212,9 +217,9 @@ const page = `<!doctype html>
   <section class="pagehead">
     <div class="glow glow--violet" aria-hidden="true"></div>
     <div class="shell pagehead__inner">
-      <span class="eyebrow">Privacy</span>
-      <h1>What DEEPER stores, what it never stores, and how long it keeps it.</h1>
-      <p>Written to match the code in this repository, not to match what a policy usually says.</p>
+      <span class="eyebrow">Data handling</span>
+      <h1>What the code keeps, what it never keeps, and why.</h1>
+      <p>No DEEPER service is operated. This describes the source and what a self-hoster takes on.</p>
     </div>
   </section>
 
@@ -233,7 +238,7 @@ ${body}
       <a href="./faq.html">Questions</a>
       <a href="./privacy-policy.html">Privacy</a>
     </nav>
-    <p class="foot__legal">A game for people who would rather ask than guess. Made for iOS and Android.</p>
+    <p class="foot__legal">A game for people who would rather ask than guess. Open source, never launched, not maintained.</p>
   </div>
 </footer>
 
